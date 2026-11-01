@@ -1,0 +1,139 @@
+F|command|packages/WidgetUI/Sources/WidgetUI/EmptyChatViewController.swift:218|context.bindings.globalSearch("", nil, nil) return .invoked
+RightArrow|command|packages/ChatUI/Sources/ChatUI/InputContextHelper.swift:415|return .invokeNext
+UpArrow|command|packages/ChatUI/Sources/ChatUI/InputContextHelper.swift:419|return .invokeNext
+DownArrow|command|packages/ChatUI/Sources/ChatUI/InputContextHelper.swift:423|return .invokeNext
+LeftArrow|command|packages/ChatUI/Sources/ChatUI/InputContextHelper.swift:427|return .invokeNext
+UpArrow|command|packages/ChatUI/Sources/ChatUI/ChatController.swift:10933|
+DownArrow|command|packages/ChatUI/Sources/ChatUI/ChatController.swift:10961|
+F|command|packages/ChatUI/Sources/ChatUI/ChatController.swift:11014|guard let `self` = self, self.mode != .scheduled, self.searchAvailable else {return .rejected} if !self.chatInteraction.presentation.searchMode.inSearch { self.chatInteraction.update({$0.updatedSearchMode(.init(inSearch:
+O|command|packages/ChatUI/Sources/ChatUI/ChatController.swift:11020|self?.chatInteraction.attachFile(true) return .invoked
+B|command|packages/ChatUI/Sources/ChatUI/ChatController.swift:11025|self?.genericView.inputView.makeBold() return .invoked
+U|shift,command|packages/ChatUI/Sources/ChatUI/ChatController.swift:11030|self?.genericView.inputView.makeUnderline() return .invoked
+I|shift,command|packages/ChatUI/Sources/ChatUI/ChatController.swift:11035|self?.genericView.inputView.makeQuote() return .invoked
+P|shift,command|packages/ChatUI/Sources/ChatUI/ChatController.swift:11040|self?.genericView.inputView.makeSpoiler() return .invoked
+X|shift,command|packages/ChatUI/Sources/ChatUI/ChatController.swift:11045|self?.genericView.inputView.makeStrikethrough() return .invoked
+Backslash|command|packages/ChatUI/Sources/ChatUI/ChatController.swift:11050|self?.genericView.inputView.removeAllAttributes() return .invoked
+U|command|packages/ChatUI/Sources/ChatUI/ChatController.swift:11055|self?.genericView.inputView.makeUrl() return .invoked
+I|command|packages/ChatUI/Sources/ChatUI/ChatController.swift:11060|self?.genericView.inputView.makeItalic() return .invoked
+R|command|packages/ChatUI/Sources/ChatUI/ChatController.swift:11066|guard let `self` = self else { return .rejected } self.chatInteraction.startRecording(true, nil) return .invoked
+K|command,shift|packages/ChatUI/Sources/ChatUI/ChatController.swift:11072|self?.genericView.inputView.makeMonospace() return .invoked
+A|command|packages/ChatUI/Sources/ChatUI/ChatSelectText.swift:742|return .rejected
+Z|command|packages/ChatUI/Sources/ChatUI/ChatInputView.swift:940|
+Z|command,shift|packages/ChatUI/Sources/ChatUI/ChatInputView.swift:941|
+Z|command|packages/ChatUI/Sources/ChatUI/ChatInputView.swift:969|self?.container.richDraftPreview?.undoInline() return .invoked
+Z|command,shift|packages/ChatUI/Sources/ChatUI/ChatInputView.swift:973|self?.container.richDraftPreview?.redoInline() return .invoked
+Z|command|packages/ChatUI/Sources/ChatUI/ChatInputView.swift:1001|guard let self = self, let draft = self.deletedRichDraft, self.chatInteraction.presentation.effectiveInput.inputText.isEmpty else { return .rejected } self.deletedRichDraft = nil self.chatInteraction.setRichTextDraft(dra
+Z|command|packages/ChatUI/Sources/ChatUI/ChatInputView.swift:2201|
+Z|command,shift|packages/ChatUI/Sources/ChatUI/ChatInputView.swift:2202|
+Space|shift|packages/InstantPageUI/Sources/InstantPageUI/InstantViewWindow.swift:369|
+Space|shift|packages/WebAppUI/Sources/WebAppUI/InstantViewInBrowser.swift:199|
+R|command|packages/WebAppUI/Sources/WebAppUI/WebappBrowser.swift:1892|self?.current?.reloadPage() return .invoked
+One|command|packages/WebAppUI/Sources/WebAppUI/WebappBrowser.swift:1897|self?.arguments?.selectAtIndex(0) return .invoked
+Two|command|packages/WebAppUI/Sources/WebAppUI/WebappBrowser.swift:1902|self?.arguments?.selectAtIndex(1) return .invoked
+Three|command|packages/WebAppUI/Sources/WebAppUI/WebappBrowser.swift:1907|self?.arguments?.selectAtIndex(2) return .invoked
+Four|command|packages/WebAppUI/Sources/WebAppUI/WebappBrowser.swift:1912|self?.arguments?.selectAtIndex(3) return .invoked
+Five|command|packages/WebAppUI/Sources/WebAppUI/WebappBrowser.swift:1917|self?.arguments?.selectAtIndex(4) return .invoked
+Six|command|packages/WebAppUI/Sources/WebAppUI/WebappBrowser.swift:1922|self?.arguments?.selectAtIndex(5) return .invoked
+Seven|command|packages/WebAppUI/Sources/WebAppUI/WebappBrowser.swift:1927|self?.arguments?.selectAtIndex(6) return .invoked
+Eight|command|packages/WebAppUI/Sources/WebAppUI/WebappBrowser.swift:1932|self?.arguments?.selectAtIndex(7) return .invoked
+Nine|command|packages/WebAppUI/Sources/WebAppUI/WebappBrowser.swift:1937|self?.arguments?.selectAtIndex(8) return .invoked
+Zero|command|packages/WebAppUI/Sources/WebAppUI/WebappBrowser.swift:1942|self?.arguments?.selectAtIndex(9) return .invoked
+T|command|packages/WebAppUI/Sources/WebAppUI/WebappBrowser.swift:1950|guard let self else { return .rejected } self.arguments?.add(self.genericView.more) return .invoked
+T|command|packages/GroupCallScreenUI/Sources/GroupCallScreenUI/GroupCallController.swift:2231|
+E|command|packages/GroupCallScreenUI/Sources/GroupCallScreenUI/GroupCallController.swift:2242|if self?.data.call.isStream == false { if self?.genericView.state?.videoSources.video == nil { arguments?.shareSource(.video, true) } else { arguments?.cancelShareVideo() } } return .invokeNext
+B|command|packages/GroupCallScreenUI/Sources/GroupCallScreenUI/GroupCallSendMessageView.swift:288|self?.textView.inputApplyTransform(.attribute(TextInputAttributes.bold)) return .invoked
+U|shift,command|packages/GroupCallScreenUI/Sources/GroupCallScreenUI/GroupCallSendMessageView.swift:293|self?.textView.inputApplyTransform(.attribute(TextInputAttributes.underline)) return .invoked
+P|shift,command|packages/GroupCallScreenUI/Sources/GroupCallScreenUI/GroupCallSendMessageView.swift:298|self?.textView.inputApplyTransform(.attribute(TextInputAttributes.spoiler)) return .invoked
+X|shift,command|packages/GroupCallScreenUI/Sources/GroupCallScreenUI/GroupCallSendMessageView.swift:303|self?.textView.inputApplyTransform(.attribute(TextInputAttributes.strikethrough)) return .invoked
+Backslash|command|packages/GroupCallScreenUI/Sources/GroupCallScreenUI/GroupCallSendMessageView.swift:308|self?.textView.inputApplyTransform(.clear) return .invoked
+U|command|packages/GroupCallScreenUI/Sources/GroupCallScreenUI/GroupCallSendMessageView.swift:313|self?.textView.inputApplyTransform(.url) return .invoked
+I|command|packages/GroupCallScreenUI/Sources/GroupCallScreenUI/GroupCallSendMessageView.swift:318|self?.textView.inputApplyTransform(.attribute(TextInputAttributes.italic)) return .invoked
+E|command|packages/PreviewSenderUI/Sources/PreviewSenderUI/PreviewSenderController.swift:2614|guard let `self` = self else {return .rejected} let state = stateValue.with { $0.currentState } let medias = stateValue.with { $0.medias } if state.state == .media, medias.count == 1, let media = medias.first, media is T
+B|command|packages/PreviewSenderUI/Sources/PreviewSenderUI/PreviewSenderController.swift:2651|self?.genericView.textView.inputApplyTransform(.attribute(TextInputAttributes.bold)) return .invoked
+U|shift,command|packages/PreviewSenderUI/Sources/PreviewSenderUI/PreviewSenderController.swift:2656|self?.genericView.textView.inputApplyTransform(.attribute(TextInputAttributes.underline)) return .invoked
+P|shift,command|packages/PreviewSenderUI/Sources/PreviewSenderUI/PreviewSenderController.swift:2661|self?.genericView.textView.inputApplyTransform(.attribute(TextInputAttributes.spoiler)) return .invoked
+X|shift,command|packages/PreviewSenderUI/Sources/PreviewSenderUI/PreviewSenderController.swift:2666|self?.genericView.textView.inputApplyTransform(.attribute(TextInputAttributes.strikethrough)) return .invoked
+U|command|packages/PreviewSenderUI/Sources/PreviewSenderUI/PreviewSenderController.swift:2672|guard let `self` = self else {return .rejected} self.genericView.textView.inputApplyTransform(.url) return .invoked
+I|command|packages/PreviewSenderUI/Sources/PreviewSenderUI/PreviewSenderController.swift:2677|self?.genericView.textView.inputApplyTransform(.attribute(TextInputAttributes.italic)) return .invoked
+I|shift,command|packages/PreviewSenderUI/Sources/PreviewSenderUI/PreviewSenderController.swift:2682|self?.genericView.textView.inputApplyTransform(.attribute(TextInputAttributes.quote)) return .invoked
+K|command,shift|packages/PreviewSenderUI/Sources/PreviewSenderUI/PreviewSenderController.swift:2688|self?.genericView.textView.inputApplyTransform(.attribute(TextInputAttributes.monospace)) return .invoked
+Return|command|packages/PeerInfoUI/Sources/PeerInfoUI/PeerInfoController.swift:772|if let strongSelf = self { return strongSelf.returnKeyAction() } return .rejected
+F|command|packages/PeerInfoUI/Sources/PeerInfoUI/PeerMediaController.swift:1095|guard let `self` = self, !self.hasSearch else { return .rejected } if self.mode == .members { self.searchGroupUsers() return .invoked } if let mode = self.mode { (self.controller(for: mode) as? PeerMediaSearchable)?.togg
+R|command|packages/AvatarEditorUI/Sources/AvatarEditorUI/EditImageModalController.swift:1033|self?.controls.arguments.rotate() return .invoked
+D|command|packages/AvatarEditorUI/Sources/AvatarEditorUI/EditImageModalController.swift:1038|self?.loadCanvas() return .invoked
+Z|command|packages/AvatarEditorUI/Sources/AvatarEditorUI/EditImageModalController.swift:1058|self?.undo() return .invoked
+Z|command,shift|packages/AvatarEditorUI/Sources/AvatarEditorUI/EditImageModalController.swift:1063|self?.redo() return .invoked
+T|command|packages/StatisticsUI/Sources/StatisticsUI/ChannelBoostStatsController.swift:940|arguments.giveaway(nil) return .invoked
+V|command|packages/TGUIKit/Sources/Window.swift:966|
+F|command|packages/ChannelAdminUI/Sources/ChannelAdminUI/ChannelEventLogController.swift:520|if let strongSelf = self { if !strongSelf.genericView.inSearch { strongSelf.genericView.showSearch() } else { strongSelf.genericView.hideSearch() } } return .invoked
+Minus|command,option|packages/GalleryUI/Sources/GalleryUI/GalleryViewer.swift:453|self?.pager.decreaseSpeed() return .invoked
+Equal|command,option|packages/GalleryUI/Sources/GalleryUI/GalleryViewer.swift:458|self?.pager.increaseSpeed() return .invoked
+R|command|packages/GalleryUI/Sources/GalleryUI/GalleryViewer.swift:463|self?.pager.rotateLeft() return .invoked
+S|command|packages/GalleryUI/Sources/GalleryUI/GalleryViewer.swift:468|self?.saveAs() return .invoked
+T|command|packages/GalleryUI/Sources/GalleryUI/SVideoController.swift:316|self?.runAdMessages([message], 10, 15) return .invoked
+B|command|packages/StoriesUI/Sources/StoriesUI/StoryPrivacyModalController.swift:1148|let view = controller?.tableView.item(stableId: InputDataEntryId.custom(_id_preview))?.view as? StoryPreviewRowView view?.inputView.inputApplyTransform(.attribute(TextInputAttributes.bold)) return .invoked
+U|shift,command|packages/StoriesUI/Sources/StoriesUI/StoryPrivacyModalController.swift:1155|let view = controller?.tableView.item(stableId: InputDataEntryId.custom(_id_preview))?.view as? StoryPreviewRowView view?.inputView.inputApplyTransform(.attribute(TextInputAttributes.underline)) return .invoked
+P|shift,command|packages/StoriesUI/Sources/StoriesUI/StoryPrivacyModalController.swift:1161|let view = controller?.tableView.item(stableId: InputDataEntryId.custom(_id_preview))?.view as? StoryPreviewRowView view?.inputView.inputApplyTransform(.attribute(TextInputAttributes.spoiler)) return .invoked
+X|shift,command|packages/StoriesUI/Sources/StoriesUI/StoryPrivacyModalController.swift:1167|let view = controller?.tableView.item(stableId: InputDataEntryId.custom(_id_preview))?.view as? StoryPreviewRowView view?.inputView.inputApplyTransform(.attribute(TextInputAttributes.strikethrough)) return .invoked
+Backslash|command|packages/StoriesUI/Sources/StoriesUI/StoryPrivacyModalController.swift:1173|let view = controller?.tableView.item(stableId: InputDataEntryId.custom(_id_preview))?.view as? StoryPreviewRowView view?.inputView.inputApplyTransform(.clear) return .invoked
+U|command|packages/StoriesUI/Sources/StoriesUI/StoryPrivacyModalController.swift:1179|let view = controller?.tableView.item(stableId: InputDataEntryId.custom(_id_preview))?.view as? StoryPreviewRowView view?.inputView.inputApplyTransform(.url) return .invoked
+I|command|packages/StoriesUI/Sources/StoriesUI/StoryPrivacyModalController.swift:1185|let view = controller?.tableView.item(stableId: InputDataEntryId.custom(_id_preview))?.view as? StoryPreviewRowView view?.inputView.inputApplyTransform(.attribute(TextInputAttributes.italic)) return .invoked
+R|command|packages/StoriesUI/Sources/StoriesUI/StoryModalController.swift:3846|if self?.isNotMainScreen == true { return .rejected } guard let `self` = self, self.genericView.isTextEmpty else { return .rejected } if !self.interactions.presentation.canRecordVoice { self.genericView.showVoiceError() 
+Equal|command|packages/StoriesUI/Sources/StoriesUI/StoryModalController.swift:3857|if self?.isNotMainScreen == true { return .rejected } self?.genericView.zoomIn() return .invoked
+Minus|command|packages/StoriesUI/Sources/StoriesUI/StoryModalController.swift:3865|if self?.isNotMainScreen == true { return .rejected } self?.genericView.zoomOut() return .invoked
+B|command|packages/StoriesUI/Sources/StoriesUI/StoryModalController.swift:3874|if self?.isNotMainScreen == true { return .rejected } self?.genericView.inputTextView?.inputApplyTransform(.attribute(TextInputAttributes.bold)) return .invoked
+U|shift,command|packages/StoriesUI/Sources/StoriesUI/StoryModalController.swift:3883|if self?.isNotMainScreen == true { return .rejected } self?.genericView.inputTextView?.inputApplyTransform(.attribute(TextInputAttributes.underline)) return .invoked
+P|shift,command|packages/StoriesUI/Sources/StoriesUI/StoryModalController.swift:3891|if self?.isNotMainScreen == true { return .rejected } self?.genericView.inputTextView?.inputApplyTransform(.attribute(TextInputAttributes.spoiler)) return .invoked
+X|shift,command|packages/StoriesUI/Sources/StoriesUI/StoryModalController.swift:3899|if self?.isNotMainScreen == true { return .rejected } self?.genericView.inputTextView?.inputApplyTransform(.attribute(TextInputAttributes.strikethrough)) return .invoked
+Backslash|command|packages/StoriesUI/Sources/StoriesUI/StoryModalController.swift:3907|if self?.isNotMainScreen == true { return .rejected } self?.genericView.inputTextView?.inputApplyTransform(.clear) return .invoked
+U|command|packages/StoriesUI/Sources/StoriesUI/StoryModalController.swift:3915|if self?.isNotMainScreen == true { return .rejected } self?.genericView.inputTextView?.inputApplyTransform(.url) return .invoked
+I|command|packages/StoriesUI/Sources/StoriesUI/StoryModalController.swift:3923|if self?.isNotMainScreen == true { return .rejected } self?.genericView.inputTextView?.inputApplyTransform(.attribute(TextInputAttributes.italic)) return .invoked
+F|command|packages/PeerModerationUI/Sources/PeerModerationUI/ChannelMembersViewController.swift:412|guard let `self` = self else {return .rejected} self.searchChannelUsers() return .invoked
+F|command|packages/PeerModerationUI/Sources/PeerModerationUI/ChannelBlocklistViewController.swift:454|guard let `self` = self else { return .rejected } self.inSearch = !self.inSearch return .invoked
+UpArrow|option|packages/ChatListUI/Sources/ChatListUI/PeersListController.swift:3624|if let item = self?.effectiveTableView.selectedItem(), item.index > 0 { self?.effectiveTableView.selectPrev() } return .invoked
+Tab|control|packages/ChatListUI/Sources/ChatListUI/PeersListController.swift:3634|self?.effectiveTableView.selectNext(turnDirection: false) return .invoked
+Tab|control,shift|packages/ChatListUI/Sources/ChatListUI/PeersListController.swift:3639|self?.effectiveTableView.selectPrev(turnDirection: false) return .invoked
+UpArrow|command|packages/ChatListUI/Sources/ChatListUI/SearchController.swift:2000|return .rejected
+DownArrow|command|packages/ChatListUI/Sources/ChatListUI/SearchController.swift:2004|return .rejected
+Z|command|packages/ImageCanvasUI/Sources/ImageCanvasUI/EditImageCutoutController.swift:482|self?.undo() return .invoked
+R|command|packages/ImageCanvasUI/Sources/ImageCanvasUI/EditVideoCropController.swift:257|self?.rotate() return .invoked
+Z|command|packages/ImageCanvasUI/Sources/ImageCanvasUI/EditImageCanvasController.swift:1051|guard let self = self, !self.isTextInputActive else { return .invokeNext } self.undo() return .invoked
+Z|command,shift|packages/ImageCanvasUI/Sources/ImageCanvasUI/EditImageCanvasController.swift:1059|guard let self = self, !self.isTextInputActive else { return .invokeNext } self.redo() return .invoked
+V|command|packages/ImageCanvasUI/Sources/ImageCanvasUI/EditImageCanvasController.swift:1081|guard let self = self, !self.isTextInputActive else { return .invokeNext } let pasteboard = NSPasteboard.general if NSImage.canInit(with: pasteboard), let image = NSImage(pasteboard: pasteboard), let cgImage = image.cgIm
+Zero|command|Telegram-Mac/app/ApplicationContext.swift:586|self?.rightController.push(ChatController(context: context, chatLocation: .peer(context.peerId))) return .invoked
+One|command|Telegram-Mac/app/ApplicationContext.swift:592|self?.openChat(0, false) return .invoked
+Two|command|Telegram-Mac/app/ApplicationContext.swift:597|self?.openChat(1, false) return .invoked
+Three|command|Telegram-Mac/app/ApplicationContext.swift:602|self?.openChat(2, false) return .invoked
+Four|command|Telegram-Mac/app/ApplicationContext.swift:607|self?.openChat(3, false) return .invoked
+Five|command|Telegram-Mac/app/ApplicationContext.swift:612|self?.openChat(4, false) return .invoked
+Six|command|Telegram-Mac/app/ApplicationContext.swift:617|self?.openChat(5, false) return .invoked
+Seven|command|Telegram-Mac/app/ApplicationContext.swift:622|self?.openChat(6, false) return .invoked
+Eight|command|Telegram-Mac/app/ApplicationContext.swift:627|self?.openChat(7, false) return .invoked
+Nine|command|Telegram-Mac/app/ApplicationContext.swift:632|self?.openChat(8, false) return .invoked
+L|command|Telegram-Mac/app/ApplicationContext.swift:655|appDelegate?.sharedApplicationContextValue?.notificationManager.updatePasslock(context.sharedContext.accountManager.transaction { transaction -> Bool in switch transaction.getAccessChallengeData() { case .none: return fa
+One|command,option|Telegram-Mac/app/ApplicationContext.swift:662|self?.openChat(0, true) return .invoked
+Two|command,option|Telegram-Mac/app/ApplicationContext.swift:667|self?.openChat(1, true) return .invoked
+Three|command,option|Telegram-Mac/app/ApplicationContext.swift:672|self?.openChat(2, true) return .invoked
+Four|command,option|Telegram-Mac/app/ApplicationContext.swift:677|self?.openChat(3, true) return .invoked
+Five|command,option|Telegram-Mac/app/ApplicationContext.swift:682|self?.openChat(4, true) return .invoked
+Six|command,option|Telegram-Mac/app/ApplicationContext.swift:687|self?.openChat(5, true) return .invoked
+Seven|command,option|Telegram-Mac/app/ApplicationContext.swift:692|self?.openChat(6, true) return .invoked
+Eight|command,option|Telegram-Mac/app/ApplicationContext.swift:697|self?.openChat(7, true) return .invoked
+Nine|command,option|Telegram-Mac/app/ApplicationContext.swift:702|self?.openChat(8, true) return .invoked
+Minus|command,option|Telegram-Mac/app/ApplicationContext.swift:707|self?.openChat(9, true) return .invoked
+One|control|Telegram-Mac/app/ApplicationContext.swift:715|self?.switchAccount(1, true) return .invoked
+Two|control|Telegram-Mac/app/ApplicationContext.swift:720|self?.switchAccount(2, true) return .invoked
+Three|control|Telegram-Mac/app/ApplicationContext.swift:725|self?.switchAccount(3, true) return .invoked
+Four|control|Telegram-Mac/app/ApplicationContext.swift:730|self?.switchAccount(4, true) return .invoked
+Five|control|Telegram-Mac/app/ApplicationContext.swift:735|self?.switchAccount(5, true) return .invoked
+Six|control|Telegram-Mac/app/ApplicationContext.swift:740|self?.switchAccount(6, true) return .invoked
+Seven|control|Telegram-Mac/app/ApplicationContext.swift:745|self?.switchAccount(7, true) return .invoked
+Eight|control|Telegram-Mac/app/ApplicationContext.swift:750|self?.switchAccount(8, true) return .invoked
+Nine|control|Telegram-Mac/app/ApplicationContext.swift:755|self?.switchAccount(9, true) return .invoked
+M|shift,command|Telegram-Mac/app/ApplicationContext.swift:762|showModal(with: QuickSwitcherModalController(context, source: .accounts), for: window) return .invoked
+Tab|control|Telegram-Mac/app/ApplicationContext.swift:790|guard self != nil else { return .rejected } if let existing = altTabController, existing.isLoaded() { existing.selectNext() return .invoked } guard let data = altTabData, !data.isEmpty else { return .rejected } altTabCon
+Tab|control,shift|Telegram-Mac/app/ApplicationContext.swift:798|if let existing = altTabController, existing.isLoaded() { existing.selectPrevious() return .invoked } return .rejected
+Y|command|Telegram-Mac/app/ApplicationContext.swift:808|return .invoked
+F|command,shift|Telegram-Mac/app/ApplicationContext.swift:817|
+Slash|command|Telegram-Mac/app/ApplicationContext.swift:822|context.bindings.rootNavigation().push(ShortcutListController(context: context)) return .invoked
+L|command|Telegram-Mac/account/SupportAccountContext.swift:148|appDelegate?.sharedApplicationContextValue?.notificationManager.updatePasslock(parent.sharedContext.accountManager.transaction { transaction -> Bool in return transaction.getAccessChallengeData() != .none }) return .invo
