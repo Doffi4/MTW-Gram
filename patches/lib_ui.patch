@@ -17700,6 +17700,60 @@ index 0801610..1c9e682 100644
  	[[nodiscard]] QRect toggleRect() const;
  
  	const style::SettingsButton &_st;
+diff --git a/ui/widgets/checkbox.cpp b/ui/widgets/checkbox.cpp
+index df0dc58..547c481 100644
+--- a/ui/widgets/checkbox.cpp
++++ b/ui/widgets/checkbox.cpp
+@@ -89,6 +89,49 @@ void ToggleView::paint(QPainter &p, int left, int top, int outerWidth) {
+ 
+ 	PainterHighQualityEnabler hq(p);
+ 	auto toggled = currentAnimationValue();
++	if (_st->thumbHeight > 0) {
++		// macOS SwitchView: 36x16 track, 20x13 white pill thumb,
++		// spring response 0.47 / damping 0.7 over the linear progress.
++		const auto spring = anim::dampedSpring(
++			2 * M_PI / 0.47,
++			0.7,
++			_st->duration / 1000.);
++		const auto progress = checked() ? toggled : (1. - toggled);
++		const auto value = spring(1., progress);
++		toggled = checked() ? value : (1. - value);
++
++		const auto width = _st->diameter + _st->width;
++		const auto inset = (_st->diameter - _st->thumbHeight) / 2.;
++		const auto travel = width - _st->thumbWidth - 2 * inset;
++		const auto track = QRectF(style::rtlrect(
++			left,
++			top,
++			width,
++			_st->diameter,
++			outerWidth));
++		const auto thumb = QRectF(
++			(style::RightToLeft()
++				? (track.x() + track.width() - inset - _st->thumbWidth
++					- travel * toggled)
++				: (track.x() + inset + travel * toggled)),
++			track.y() + inset,
++			_st->thumbWidth,
++			_st->thumbHeight);
++		p.setPen(Qt::NoPen);
++		p.setBrush(anim::brush(_st->untoggledFg, _st->toggledFg, toggled));
++		p.drawRoundedRect(track, track.height() / 2., track.height() / 2.);
++		p.setBrush(anim::brush(_st->untoggledBg, _st->toggledBg, toggled));
++		p.drawRoundedRect(thumb, thumb.height() / 2., thumb.height() / 2.);
++		if (_locked) {
++			_st->lockIcon.paint(
++				p,
++				int(thumb.x() + (thumb.width() - _st->lockIcon.width()) / 2),
++				int(thumb.y() + (thumb.height() - _st->lockIcon.height()) / 2),
++				outerWidth,
++				anim::color(_st->untoggledFg, _st->toggledFg, toggled));
++		}
++		return;
++	}
+ 	auto fullWidth = _st->diameter + _st->width;
+ 	auto innerDiameter = _st->diameter - 2 * _st->shift;
+ 	auto innerRadius = float64(innerDiameter) / 2.;
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
 index d57ac56..6399873 100644
 --- a/ui/widgets/fields/input_field.cpp
@@ -17820,10 +17874,19 @@ index 2a2e689..b051a05 100644
  
  private:
 diff --git a/ui/widgets/widgets.style b/ui/widgets/widgets.style
-index 8b8df7d..1624069 100644
+index 8b8df7d..7156308 100644
 --- a/ui/widgets/widgets.style
 +++ b/ui/widgets/widgets.style
-@@ -264,6 +264,9 @@ Menu {
+@@ -130,6 +130,8 @@ Toggle {
+ 	stroke: pixels;
+ 	lockIcon: icon;
+ 	rippleAreaPadding: pixels;
++	thumbWidth: pixels; // macOS switch: filled track, pill thumb, 0 = off.
++	thumbHeight: pixels;
+ }
+ 
+ Check {
+@@ -264,6 +266,9 @@ Menu {
  	widthMax: pixels;
  
  	ripple: RippleAnimation;
@@ -17833,7 +17896,7 @@ index 8b8df7d..1624069 100644
  }
  
  PopupMenu {
-@@ -557,6 +560,9 @@ SettingsButton {
+@@ -557,6 +562,9 @@ SettingsButton {
  	toggleSkip: pixels;
  
  	ripple: RippleAnimation;
@@ -17843,7 +17906,16 @@ index 8b8df7d..1624069 100644
  }
  
  SettingsCountButton {
-@@ -929,12 +935,12 @@ roundShadowRadius8px: Shadow {
+@@ -874,6 +882,8 @@ defaultToggle: Toggle {
+ 	vshift: 0px;
+ 	stroke: 0px;
+ 	rippleAreaPadding: 8px;
++	thumbWidth: 0px;
++	thumbHeight: 0px;
+ }
+ defaultCheckbox: Checkbox {
+ 	textFg: windowFg;
+@@ -929,12 +939,12 @@ roundShadowRadius8px: Shadow {
  }
  
  defaultPanelAnimation: PanelAnimation {
@@ -17861,7 +17933,7 @@ index 8b8df7d..1624069 100644
  	startFadeTop: 0.;
  	fadeHeight: 0.2;
  	fadeOpacity: 1.0;
-@@ -966,7 +972,7 @@ defaultMenu: Menu {
+@@ -966,7 +976,7 @@ defaultMenu: Menu {
  	itemFgShortcutOver: windowSubTextFgOver;
  	itemFgShortcutDisabled: menuFgDisabled;
  	itemIconPosition: point(0px, 0px);
@@ -17870,7 +17942,7 @@ index 8b8df7d..1624069 100644
  	itemRightSkip: 6px;
  	itemStyle: defaultTextStyle;
  	itemToggle: defaultMenuToggle;
-@@ -981,6 +987,9 @@ defaultMenu: Menu {
+@@ -981,6 +991,9 @@ defaultMenu: Menu {
  	widthMax: 300px;
  
  	ripple: defaultRippleAnimation;
@@ -17880,7 +17952,7 @@ index 8b8df7d..1624069 100644
  }
  defaultPopupMenu: PopupMenu {
  	shadow: defaultBoxShadow;
-@@ -992,9 +1001,9 @@ defaultPopupMenu: PopupMenu {
+@@ -992,9 +1005,9 @@ defaultPopupMenu: PopupMenu {
  
  	menu: defaultMenu;
  
@@ -17893,7 +17965,28 @@ index 8b8df7d..1624069 100644
  }
  
  defaultPillTabs: PillTabs {
-@@ -1524,6 +1533,9 @@ defaultSettingsButton: SettingsButton {
+@@ -1497,10 +1510,18 @@ backButton: IconButton(defaultIconButton) {
+ }
+ 
+ defaultSettingsToggle: Toggle(defaultToggle) {
+-	untoggledFg: menuIconFg;
++	toggledBg: windowFgActive;
++	toggledFg: windowBgActive;
++	untoggledBg: windowFgActive;
++	untoggledFg: checkboxFg;
++	duration: 988; // macOS SwitchMotion.settlingDuration.
++	border: 2px;
++	diameter: 16px;
++	width: 20px;
++	thumbWidth: 20px;
++	thumbHeight: 13px;
+ }
+ defaultSettingsToggleOver: Toggle(defaultSettingsToggle) {
+-	untoggledFg: menuIconFgOver;
+ }
+ defaultSettingsRightLabel: FlatLabel(defaultFlatLabel) {
+ 	textFg: windowActiveTextFg;
+@@ -1524,6 +1545,9 @@ defaultSettingsButton: SettingsButton {
  	toggleSkip: 22px;
  
  	ripple: defaultRippleAnimation;
@@ -17903,7 +17996,7 @@ index 8b8df7d..1624069 100644
  }
  
  defaultSideBarButton: SideBarButton {
-@@ -1693,8 +1705,8 @@ menuIconAttentionColor: attentionButtonFg;
+@@ -1693,8 +1717,8 @@ menuIconAttentionColor: attentionButtonFg;
  menuIconSubmenuArrow: defaultMenuArrow;
  
  menuWithIcons: Menu(defaultMenu) {
@@ -17914,7 +18007,7 @@ index 8b8df7d..1624069 100644
  
  	arrow: menuIconSubmenuArrow;
  }
-@@ -1707,7 +1719,7 @@ menuAttention: Menu(defaultMenu) {
+@@ -1707,7 +1731,7 @@ menuAttention: Menu(defaultMenu) {
  	itemFgOver: attentionButtonFgOver;
  }
  popupMenuWithIcons: PopupMenu(defaultPopupMenu) {

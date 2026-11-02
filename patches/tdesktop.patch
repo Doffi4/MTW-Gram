@@ -1990,10 +1990,23 @@ index 30024a8..9bf8c66 100644
  		updateMembersShowArea();
  		update();
 diff --git a/Telegram/SourceFiles/info/info.style b/Telegram/SourceFiles/info/info.style
-index aa58185..15bd172 100644
+index aa58185..8daaa28 100644
 --- a/Telegram/SourceFiles/info/info.style
 +++ b/Telegram/SourceFiles/info/info.style
-@@ -916,11 +916,19 @@ editPeerUsernameFieldMargins: margins(22px, 0px, 22px, 0px);
+@@ -602,11 +602,9 @@ infoBlockHeaderLabel: FlatLabel(infoProfileStatus) {
+ }
+ infoBlockHeaderPosition: point(79px, 17px);
+ 
+-infoProfileToggle: Toggle(defaultToggle) {
+-	untoggledFg: menuIconFg;
++infoProfileToggle: Toggle(defaultSettingsToggle) {
+ }
+ infoProfileToggleOver: Toggle(infoProfileToggle) {
+-	untoggledFg: menuIconFgOver;
+ }
+ infoProfileButton: SettingsButton(defaultSettingsButton) {
+ 	style: defaultTextStyle;
+@@ -916,11 +914,19 @@ editPeerUsernameFieldMargins: margins(22px, 0px, 22px, 0px);
  historyTopBarBack: IconButton(infoTopBarBack) {
  	width: 52px;
  }
@@ -2171,6 +2184,126 @@ index 9586275..9f8a45b 100644
  	field: InputField(historyComposeField) {
  		textMargins: margins(2px, 0px, 2px, 0px);
  		textFg: storiesComposeWhiteText;
+diff --git a/Telegram/SourceFiles/settings/sections/settings_chat.cpp b/Telegram/SourceFiles/settings/sections/settings_chat.cpp
+index 6c34fac..696067c 100644
+--- a/Telegram/SourceFiles/settings/sections/settings_chat.cpp
++++ b/Telegram/SourceFiles/settings/sections/settings_chat.cpp
+@@ -1340,40 +1340,31 @@ void SetupStickersEmoji(
+ 		std::move(wrap),
+ 		QMargins(0, 0, 0, st::settingsCheckbox.margin.bottom())));
+ 
+-	const auto checkbox = [&](const QString &label, bool checked) {
+-		return object_ptr<Ui::Checkbox>(
+-			container,
+-			label,
+-			checked,
+-			st::settingsCheckbox);
+-	};
++	// Return the rows: the hidden checkboxes are not worth highlighting.
+ 	const auto addWithReturn = [&](
+ 			const QString &label,
+ 			bool checked,
+ 			auto &&handle) {
+-		const auto result = inner->add(
+-			checkbox(label, checked),
+-			st::settingsCheckboxPadding);
+-		result->checkedChanges(
++		auto result = CreateToggleRow(inner, rpl::single(label), checked);
++		result.checkbox->checkedChanges(
+ 		) | rpl::on_next(
+ 			std::move(handle),
+ 			inner->lifetime());
+-		return result;
++		return inner->add(std::move(result.row));
+ 	};
+ 	const auto addSliding = [&](
+ 			const QString &label,
+ 			bool checked,
+ 			auto &&handle,
+ 			rpl::producer<bool> shown) {
+-		const auto wrap = inner->add(
+-			object_ptr<Ui::SlideWrap<Ui::Checkbox>>(
+-				inner,
+-				checkbox(label, checked),
+-				st::settingsCheckboxPadding));
+-		wrap->setDuration(0)->toggleOn(std::move(shown))->entity()->checkedChanges(
++		auto result = CreateToggleRow(inner, rpl::single(label), checked);
++		result.checkbox->checkedChanges(
+ 		) | rpl::on_next(
+ 			std::move(handle),
+ 			inner->lifetime());
++		const auto wrap = inner->add(
++			object_ptr<Ui::SlideWrap<Button>>(inner, std::move(result.row)));
++		wrap->setDuration(0)->toggleOn(std::move(shown));
+ 		return wrap->entity();
+ 	};
+ 
+@@ -1693,13 +1684,10 @@ void SetupMessages(
+ 
+ 	Ui::AddSkip(inner, st::settingsSendTypeSkip);
+ 
+-	const auto cornerReply = inner->add(
+-		object_ptr<Ui::Checkbox>(
+-			inner,
+-			tr::lng_settings_chat_corner_reply(tr::now),
+-			Core::App().settings().cornerReply(),
+-			st::settingsCheckbox),
+-		st::settingsCheckboxPadding);
++	const auto cornerReply = AddToggleRow(
++		inner,
++		tr::lng_settings_chat_corner_reply(),
++		Core::App().settings().cornerReply());
+ 	cornerReply->checkedChanges(
+ 	) | rpl::on_next([=](bool checked) {
+ 		Core::App().settings().setCornerReply(checked);
+@@ -1707,18 +1695,15 @@ void SetupMessages(
+ 	}, inner->lifetime());
+ 	if (highlights) {
+ 		highlights->push_back({ u"chat/corner-reply"_q, {
+-			cornerReply,
++			cornerReply->parentWidget(),
+ 			{ .radius = st::boxRadius },
+ 		} });
+ 	}
+ 
+-	const auto cornerReaction = inner->add(
+-		object_ptr<Ui::Checkbox>(
+-			inner,
+-			tr::lng_settings_chat_corner_reaction(tr::now),
+-			Core::App().settings().cornerReaction(),
+-			st::settingsCheckbox),
+-		st::settingsCheckboxPadding);
++	const auto cornerReaction = AddToggleRow(
++		inner,
++		tr::lng_settings_chat_corner_reaction(),
++		Core::App().settings().cornerReaction());
+ 	cornerReaction->checkedChanges(
+ 	) | rpl::on_next([=](bool checked) {
+ 		Core::App().settings().setCornerReaction(checked);
+@@ -1726,18 +1711,15 @@ void SetupMessages(
+ 	}, inner->lifetime());
+ 	if (highlights) {
+ 		highlights->push_back({ u"chat/corner-reaction"_q, {
+-			cornerReaction,
++			cornerReaction->parentWidget(),
+ 			{ .radius = st::boxRadius },
+ 		} });
+ 	}
+ 
+-	const auto pullToNext = inner->add(
+-		object_ptr<Ui::Checkbox>(
+-			inner,
+-			tr::lng_settings_pull_to_next_channel(tr::now),
+-			Core::App().settings().pullToNextChannel(),
+-			st::settingsCheckbox),
+-		st::settingsCheckboxPadding);
++	const auto pullToNext = AddToggleRow(
++		inner,
++		tr::lng_settings_pull_to_next_channel(),
++		Core::App().settings().pullToNextChannel());
+ 	pullToNext->checkedChanges(
+ 	) | rpl::on_next([=](bool checked) {
+ 		Core::App().settings().setPullToNextChannel(checked);
 diff --git a/Telegram/SourceFiles/settings/settings.style b/Telegram/SourceFiles/settings/settings.style
 index f9622d1..f9fbc63 100644
 --- a/Telegram/SourceFiles/settings/settings.style
@@ -2201,6 +2334,119 @@ index f9622d1..f9fbc63 100644
  }
  settingsButtonLight: SettingsButton(settingsButton) {
  	textFg: lightButtonFg;
+diff --git a/Telegram/SourceFiles/settings/settings_builder.cpp b/Telegram/SourceFiles/settings/settings_builder.cpp
+index 20b6e6d..0558e33 100644
+--- a/Telegram/SourceFiles/settings/settings_builder.cpp
++++ b/Telegram/SourceFiles/settings/settings_builder.cpp
+@@ -385,25 +385,27 @@ Ui::SettingsButton *SectionBuilder::addPrivacyButton(PrivacyButtonArgs &&args) {
+ }
+ 
+ Ui::Checkbox *SectionBuilder::addCheckbox(CheckboxArgs &&args) {
++	auto checkbox = (Ui::Checkbox*)nullptr;
+ 	const auto factory = [&](not_null<Ui::VerticalLayout*> container) {
+-		return object_ptr<Ui::Checkbox>(
++		auto result = CreateToggleRow(
+ 			container,
+-			ResolveTitle(rpl::duplicate(args.title)),
+-			args.checked,
+-			st::settingsCheckbox);
++			rpl::duplicate(args.title),
++			args.checked);
++		checkbox = result.checkbox;
++		return std::move(result.row);
+ 	};
+-	return static_cast<Ui::Checkbox*>(addControl({
++	addControl({
+ 		.factory = factory,
+ 		.id = std::move(args.id),
+ 		.title = rpl::duplicate(args.title),
+-		.margin = st::settingsCheckboxPadding,
+ 		.highlight = std::move(args.highlight),
+ 		.shown = std::move(args.shown),
+ 		.keywords = std::move(args.keywords),
+ 		.searchCheckIcon = (args.checked
+ 			? SearchEntryCheckIcon::Checked
+ 			: SearchEntryCheckIcon::Unchecked),
+-	}));
++	});
++	return checkbox;
+ }
+ 
+ void SectionBuilder::addSubsectionTitle(SubsectionTitleArgs &&args) {
+diff --git a/Telegram/SourceFiles/settings/settings_common.cpp b/Telegram/SourceFiles/settings/settings_common.cpp
+index 7133758..523ebe1 100644
+--- a/Telegram/SourceFiles/settings/settings_common.cpp
++++ b/Telegram/SourceFiles/settings/settings_common.cpp
+@@ -482,6 +482,36 @@ not_null<Button*> AddButtonWithIcon(
+ 			std::move(descriptor)));
+ }
+ 
++ToggleRow CreateToggleRow(
++		not_null<QWidget*> parent,
++		rpl::producer<QString> text,
++		bool checked) {
++	auto row = object_ptr<Button>(
++		parent,
++		std::move(text),
++		st::settingsButtonNoIcon);
++	const auto checkbox = Ui::CreateChild<Ui::Checkbox>(
++		row.data(),
++		QString(),
++		checked);
++	checkbox->hide();
++	row->toggleOn(checkbox->checkedValue());
++	row->toggledChanges(
++	) | rpl::on_next([=](bool value) {
++		checkbox->setChecked(value);
++	}, row->lifetime());
++	return { std::move(row), checkbox };
++}
++
++not_null<Ui::Checkbox*> AddToggleRow(
++		not_null<Ui::VerticalLayout*> container,
++		rpl::producer<QString> text,
++		bool checked) {
++	auto result = CreateToggleRow(container, std::move(text), checked);
++	container->add(std::move(result.row));
++	return result.checkbox;
++}
++
+ void CreateRightLabel(
+ 		not_null<Button*> button,
+ 		v::text::data &&label,
+diff --git a/Telegram/SourceFiles/settings/settings_common.h b/Telegram/SourceFiles/settings/settings_common.h
+index f42ed94..3bdc5fd 100644
+--- a/Telegram/SourceFiles/settings/settings_common.h
++++ b/Telegram/SourceFiles/settings/settings_common.h
+@@ -46,6 +46,7 @@ class SettingsButton;
+ class AbstractButton;
+ class MediaSlider;
+ class ToggleView;
++class Checkbox;
+ } // namespace Ui
+ 
+ namespace Ui::Menu {
+@@ -270,6 +271,20 @@ not_null<Button*> AddButtonWithIcon(
+ 	rpl::producer<QString> text,
+ 	const style::SettingsButton &st,
+ 	IconDescriptor &&descriptor = {});
++// macOS: a checkbox setting shown as a card row with a switch. The hidden
++// checkbox (child of the row) keeps the Ui::Checkbox API for callers.
++struct ToggleRow {
++	object_ptr<Button> row;
++	not_null<Ui::Checkbox*> checkbox;
++};
++[[nodiscard]] ToggleRow CreateToggleRow(
++	not_null<QWidget*> parent,
++	rpl::producer<QString> text,
++	bool checked);
++not_null<Ui::Checkbox*> AddToggleRow(
++	not_null<Ui::VerticalLayout*> container,
++	rpl::producer<QString> text,
++	bool checked);
+ not_null<Button*> AddButtonWithLabel(
+ 	not_null<Ui::VerticalLayout*> container,
+ 	rpl::producer<QString> text,
 diff --git a/Telegram/SourceFiles/test/test_palette.cpp b/Telegram/SourceFiles/test/test_palette.cpp
 index 4d781ba..7232a6e 100644
 --- a/Telegram/SourceFiles/test/test_palette.cpp
