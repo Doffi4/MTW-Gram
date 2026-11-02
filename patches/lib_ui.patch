@@ -17529,6 +17529,29 @@ index ec3171e..0379ad3 100644
  	if (bgOpacity == 0.) {
  		return;
  	}
+diff --git a/ui/layers/layers.style b/ui/layers/layers.style
+index ebb7796..1939b35 100644
+--- a/ui/layers/layers.style
++++ b/ui/layers/layers.style
+@@ -145,14 +145,15 @@ boxLoadingAnimation: InfiniteRadialAnimation(defaultInfiniteRadialAnimation) {
+ }
+ boxLoadingSize: 20px;
+ 
++// macOS section header: uppercase 12 medium, secondary text color.
+ defaultSubsectionTitle: FlatLabel(defaultFlatLabel) {
+ 	style: TextStyle(semiboldTextStyle) {
+-		font: font(boxFontSize semibold);
++		font: font(12px semibold);
+ 	}
+-	textFg: windowActiveTextFg;
++	textFg: windowSubTextFg;
+ 	minWidth: 240px;
+ }
+-defaultSubsectionTitlePadding: margins(22px, 7px, 10px, 9px);
++defaultSubsectionTitlePadding: margins(26px, 10px, 10px, 6px);
+ 
+ separatePanelBorderCacheSize: 60px;
+ separatePanelTitleHeight: 62px;
 diff --git a/ui/style/style_core.cpp b/ui/style/style_core.cpp
 index e589944..5c937c7 100644
 --- a/ui/style/style_core.cpp
@@ -17573,6 +17596,110 @@ index a8d68ed..9407b87 100644
  
  	for (const auto &file : QDir(u":/gui/fonts/"_q).entryInfoList()) {
  		LoadCustomFont(Ui::Text::FontPath(file.canonicalFilePath()));
+diff --git a/ui/widgets/buttons.cpp b/ui/widgets/buttons.cpp
+index 690ba6f..4d0bfa8 100644
+--- a/ui/widgets/buttons.cpp
++++ b/ui/widgets/buttons.cpp
+@@ -16,8 +16,10 @@
+ #include "ui/rect.h"
+ #include "ui/qt_object_factory.h"
+ #include "ui/round_rect.h"
++#include "styles/palette.h"
+ 
+ #include <QtGui/QtEvents>
++#include <QtGui/QPainterPath>
+ 
+ namespace Ui {
+ namespace {
+@@ -980,7 +982,14 @@ void SettingsButton::paintEvent(QPaintEvent *e) {
+ 	const auto paintOver = (isOver() || isDown()) && !isDisabled();
+ 	paintBg(p, e->rect(), paintOver);
+ 
+-	paintRipple(p, 0, 0);
++	if (_st.cardSkip) {
++		p.save();
++		p.setClipRect(cardRect());
++		paintRipple(p, 0, 0);
++		p.restore();
++	} else {
++		paintRipple(p, 0, 0);
++	}
+ 
+ 	const auto outerw = width();
+ 	paintText(p, paintOver, outerw);
+@@ -991,7 +1000,58 @@ void SettingsButton::paintEvent(QPaintEvent *e) {
+ }
+ 
+ void SettingsButton::paintBg(Painter &p, const QRect &rect, bool over) const {
+-	p.fillRect(rect, over ? _st.textBgOver : _st.textBg);
++	if (!_st.cardSkip) {
++		p.fillRect(rect, over ? _st.textBgOver : _st.textBg);
++		return;
++	}
++	// macOS grouped rows: one rounded card per run of adjacent rows.
++	const auto card = cardRect();
++	const auto above = hasCardNeighbor(false);
++	const auto below = hasCardNeighbor(true);
++	const auto radius = std::min(_st.cardRadius, card.height() / 2);
++	auto path = QPainterPath();
++	path.addRoundedRect(card, radius, radius);
++	if (above) {
++		path.addRect(card.x(), card.y(), card.width(), card.height() / 2);
++	}
++	if (below) {
++		path.addRect(
++			card.x(),
++			card.y() + card.height() / 2,
++			card.width(),
++			card.height() - card.height() / 2);
++	}
++	path.setFillRule(Qt::WindingFill);
++	auto hq = PainterHighQualityEnabler(p);
++	p.setPen(Qt::NoPen);
++	p.setBrush(over ? _st.textBgOver : _st.textBg);
++	p.drawPath(path.simplified());
++	if (below) {
++		const auto left = std::max(_padding.left(), card.x());
++		p.fillRect(
++			left,
++			card.y() + card.height() - st::lineWidth,
++			card.x() + card.width() - left,
++			st::lineWidth,
++			st::menuSeparatorFg);
++	}
++}
++
++QRect SettingsButton::cardRect() const {
++	return rect().marginsRemoved({ _st.cardSkip, 0, _st.cardSkip, 0 });
++}
++
++bool SettingsButton::hasCardNeighbor(bool below) const {
++	const auto window = this->window();
++	const auto point = QPoint(width() / 2, below ? (height() + 1) : -2);
++	for (auto child = window->childAt(mapTo(window, point))
++		; child && child != window
++		; child = child->parentWidget()) {
++		if (const auto button = dynamic_cast<SettingsButton*>(child)) {
++			return (button != this) && (button->_st.cardSkip != 0);
++		}
++	}
++	return false;
+ }
+ 
+ void SettingsButton::paintText(Painter &p, bool over, int outerw) const {
+diff --git a/ui/widgets/buttons.h b/ui/widgets/buttons.h
+index 0801610..1c9e682 100644
+--- a/ui/widgets/buttons.h
++++ b/ui/widgets/buttons.h
+@@ -357,6 +357,8 @@ protected:
+ 
+ private:
+ 	void setText(TextWithEntities &&text);
++	[[nodiscard]] QRect cardRect() const;
++	[[nodiscard]] bool hasCardNeighbor(bool below) const;
+ 	[[nodiscard]] QRect toggleRect() const;
+ 
+ 	const style::SettingsButton &_st;
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
 index d57ac56..6399873 100644
 --- a/ui/widgets/fields/input_field.cpp
@@ -17693,7 +17820,7 @@ index 2a2e689..b051a05 100644
  
  private:
 diff --git a/ui/widgets/widgets.style b/ui/widgets/widgets.style
-index 8b8df7d..627b652 100644
+index 8b8df7d..1624069 100644
 --- a/ui/widgets/widgets.style
 +++ b/ui/widgets/widgets.style
 @@ -264,6 +264,9 @@ Menu {
@@ -17706,7 +17833,17 @@ index 8b8df7d..627b652 100644
  }
  
  PopupMenu {
-@@ -929,12 +932,12 @@ roundShadowRadius8px: Shadow {
+@@ -557,6 +560,9 @@ SettingsButton {
+ 	toggleSkip: pixels;
+ 
+ 	ripple: RippleAnimation;
++
++	cardSkip: pixels; // macOS grouped rows: card inset, 0 = plain row.
++	cardRadius: pixels;
+ }
+ 
+ SettingsCountButton {
+@@ -929,12 +935,12 @@ roundShadowRadius8px: Shadow {
  }
  
  defaultPanelAnimation: PanelAnimation {
@@ -17724,7 +17861,7 @@ index 8b8df7d..627b652 100644
  	startFadeTop: 0.;
  	fadeHeight: 0.2;
  	fadeOpacity: 1.0;
-@@ -966,7 +969,7 @@ defaultMenu: Menu {
+@@ -966,7 +972,7 @@ defaultMenu: Menu {
  	itemFgShortcutOver: windowSubTextFgOver;
  	itemFgShortcutDisabled: menuFgDisabled;
  	itemIconPosition: point(0px, 0px);
@@ -17733,7 +17870,7 @@ index 8b8df7d..627b652 100644
  	itemRightSkip: 6px;
  	itemStyle: defaultTextStyle;
  	itemToggle: defaultMenuToggle;
-@@ -981,6 +984,9 @@ defaultMenu: Menu {
+@@ -981,6 +987,9 @@ defaultMenu: Menu {
  	widthMax: 300px;
  
  	ripple: defaultRippleAnimation;
@@ -17743,7 +17880,7 @@ index 8b8df7d..627b652 100644
  }
  defaultPopupMenu: PopupMenu {
  	shadow: defaultBoxShadow;
-@@ -992,9 +998,9 @@ defaultPopupMenu: PopupMenu {
+@@ -992,9 +1001,9 @@ defaultPopupMenu: PopupMenu {
  
  	menu: defaultMenu;
  
@@ -17756,7 +17893,17 @@ index 8b8df7d..627b652 100644
  }
  
  defaultPillTabs: PillTabs {
-@@ -1693,8 +1699,8 @@ menuIconAttentionColor: attentionButtonFg;
+@@ -1524,6 +1533,9 @@ defaultSettingsButton: SettingsButton {
+ 	toggleSkip: 22px;
+ 
+ 	ripple: defaultRippleAnimation;
++
++	cardSkip: 0px;
++	cardRadius: 0px;
+ }
+ 
+ defaultSideBarButton: SideBarButton {
+@@ -1693,8 +1705,8 @@ menuIconAttentionColor: attentionButtonFg;
  menuIconSubmenuArrow: defaultMenuArrow;
  
  menuWithIcons: Menu(defaultMenu) {
@@ -17767,7 +17914,7 @@ index 8b8df7d..627b652 100644
  
  	arrow: menuIconSubmenuArrow;
  }
-@@ -1707,7 +1713,7 @@ menuAttention: Menu(defaultMenu) {
+@@ -1707,7 +1719,7 @@ menuAttention: Menu(defaultMenu) {
  	itemFgOver: attentionButtonFgOver;
  }
  popupMenuWithIcons: PopupMenu(defaultPopupMenu) {

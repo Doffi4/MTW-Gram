@@ -1821,6 +1821,19 @@ index 3fa5e74..80ecc14 100644
  	}
  }
  
+diff --git a/Telegram/SourceFiles/history/view/history_view_element.cpp b/Telegram/SourceFiles/history/view/history_view_element.cpp
+index aab807a..8ada874 100644
+--- a/Telegram/SourceFiles/history/view/history_view_element.cpp
++++ b/Telegram/SourceFiles/history/view/history_view_element.cpp
+@@ -102,7 +102,7 @@ namespace {
+ }
+ 
+ // A new message from the same sender is attached to previous within 15 minutes.
+-constexpr int kAttachMessageToPreviousSecondsDelta = 900;
++constexpr int kAttachMessageToPreviousSecondsDelta = 600; // macOS simpleDif.
+ constexpr auto kMaxShownLine = 1024 * 1024;
+ 
+ Element *HoveredElement/* = nullptr*/;
 diff --git a/Telegram/SourceFiles/history/view/history_view_list_widget.cpp b/Telegram/SourceFiles/history/view/history_view_list_widget.cpp
 index 555a33e..3b2b12b 100644
 --- a/Telegram/SourceFiles/history/view/history_view_list_widget.cpp
@@ -2002,6 +2015,22 @@ index aa58185..15bd172 100644
  topBarNameRightPadding: 3px;
  topBarClearButton: RoundButton(defaultLightButton) {
  	width: -18px;
+diff --git a/Telegram/SourceFiles/info/info_content_widget.cpp b/Telegram/SourceFiles/info/info_content_widget.cpp
+index bcecc3c..4f962ae 100644
+--- a/Telegram/SourceFiles/info/info_content_widget.cpp
++++ b/Telegram/SourceFiles/info/info_content_widget.cpp
+@@ -89,7 +89,10 @@ ContentWidget::ContentWidget(
+ 		if (value != Wrap::Layer) {
+ 			applyAdditionalScroll(0);
+ 		}
+-		_bg = (value == Wrap::Layer)
++		// macOS: settings rows are cards on the grouped list background.
++		_bg = (_controller->section().type() == Section::Type::Settings)
++			? st::boxDividerBg
++			: (value == Wrap::Layer)
+ 			? st::boxBg
+ 			: st::profileBg;
+ 		update();
 diff --git a/Telegram/SourceFiles/mainwidget.cpp b/Telegram/SourceFiles/mainwidget.cpp
 index ec9a349..c70cc22 100644
 --- a/Telegram/SourceFiles/mainwidget.cpp
@@ -2142,6 +2171,36 @@ index 9586275..9f8a45b 100644
  	field: InputField(historyComposeField) {
  		textMargins: margins(2px, 0px, 2px, 0px);
  		textFg: storiesComposeWhiteText;
+diff --git a/Telegram/SourceFiles/settings/settings.style b/Telegram/SourceFiles/settings/settings.style
+index f9622d1..f9fbc63 100644
+--- a/Telegram/SourceFiles/settings/settings.style
++++ b/Telegram/SourceFiles/settings/settings.style
+@@ -10,10 +10,14 @@ using "ui/widgets/widgets.style";
+ using "info/info.style";
+ using "boxes/boxes.style";
+ 
++// macOS grouped rows (GeneralRowItem): card inset 12, radius 20, inner 14.
+ settingsButton: SettingsButton(infoProfileButton) {
+ 	style: boxTextStyle;
+-	padding: margins(60px, 10px, 22px, 10px);
+-	iconLeft: 20px;
++	padding: margins(64px, 10px, 26px, 10px);
++	iconLeft: 24px;
++	toggleSkip: 26px;
++	cardSkip: 12px;
++	cardRadius: 20px;
+ }
+ settingsButtonRightLabelSpoiler: SettingsButton(settingsButton) {
+ 	rightLabel: FlatLabel(defaultSettingsRightLabel) {
+@@ -23,7 +27,7 @@ settingsButtonRightLabelSpoiler: SettingsButton(settingsButton) {
+ 	}
+ }
+ settingsButtonNoIcon: SettingsButton(settingsButton) {
+-	padding: margins(22px, 10px, 22px, 8px);
++	padding: margins(26px, 10px, 26px, 10px);
+ }
+ settingsButtonLight: SettingsButton(settingsButton) {
+ 	textFg: lightButtonFg;
 diff --git a/Telegram/SourceFiles/test/test_palette.cpp b/Telegram/SourceFiles/test/test_palette.cpp
 index 4d781ba..7232a6e 100644
 --- a/Telegram/SourceFiles/test/test_palette.cpp
@@ -2156,9 +2215,18 @@ index 4d781ba..7232a6e 100644
  // The self-test's bare-toggle observation window, and the colour its
  // nondiscriminating probe always answers.
 diff --git a/Telegram/SourceFiles/ui/chat/chat.style b/Telegram/SourceFiles/ui/chat/chat.style
-index 4dc6e4b..36405ec 100644
+index 4dc6e4b..e56ac72 100644
 --- a/Telegram/SourceFiles/ui/chat/chat.style
 +++ b/Telegram/SourceFiles/ui/chat/chat.style
+@@ -11,7 +11,7 @@ using "ui/widgets/widgets.style";
+ using "ui/menu_icons.style";
+ using "chat_helpers/chat_helpers.style"; // GroupCallUserpics
+ 
+-msgMaxWidth: 430px;
++msgMaxWidth: 450px; // macOS min_block_width.
+ msgFont: font(fsize);
+ msgNameFont: semiboldFont;
+ msgNameStyle: semiboldTextStyle;
 @@ -50,12 +50,14 @@ tagInfoAdminsOnlyLabel: FlatLabel(defaultFlatLabel) {
  }
  
@@ -2177,7 +2245,19 @@ index 4dc6e4b..36405ec 100644
  textRevealGradient: 24px;
  middleClickAutoscrollSpeedScale: 30px;
  middleClickAutoscrollMaxSpeed: 7200px;
-@@ -323,7 +325,7 @@ historyInfoToast: Toast(defaultToast) {
+@@ -92,8 +94,9 @@ msgReplyPadding: margins(6px, 6px, 11px, 6px);
+ msgReplyBarPos: point(1px, 0px);
+ msgReplyBarSize: size(2px, 36px);
+ msgReplyBarSkip: 10px;
+-msgServicePadding: margins(12px, 3px, 12px, 4px);
+-msgServiceMargin: margins(10px, 10px, 10px, 2px);
++// macOS date pill: text + 16 wide, text + 6 high, row 30.
++msgServicePadding: margins(8px, 3px, 8px, 3px);
++msgServiceMargin: margins(10px, 4px, 10px, 4px);
+ monoforumBarUserpicSkip: 2px;
+ 
+ msgDateSpace: 12px;
+@@ -323,7 +326,7 @@ historyInfoToast: Toast(defaultToast) {
  }
  historyInfoToastIcon: icon {{ "toast/info", toastFg }};
  
@@ -2227,6 +2307,22 @@ index c8f0cd8..8387fb3 100644
  	const auto y = 1. - RiseProgress(_progress);
  	_position = target + QPoint(
  		int(base::SafeRound(_residual->x() * x)),
+diff --git a/Telegram/SourceFiles/ui/vertical_list.cpp b/Telegram/SourceFiles/ui/vertical_list.cpp
+index fca7301..3f4c754 100644
+--- a/Telegram/SourceFiles/ui/vertical_list.cpp
++++ b/Telegram/SourceFiles/ui/vertical_list.cpp
+@@ -75,7 +75,10 @@ not_null<Ui::FlatLabel*> AddSubsectionTitle(
+ 	return container->add(
+ 		object_ptr<Ui::FlatLabel>(
+ 			container,
+-			std::move(text),
++			st ? std::move(text) : (std::move(text) | rpl::map([](
++				const QString &value) {
++				return value.toUpper(); // macOS section headers.
++			})),
+ 			st ? *st : st::defaultSubsectionTitle),
+ 		st::defaultSubsectionTitlePadding + addPadding);
+ }
 diff --git a/Telegram/SourceFiles/window/themes/window_themes_embedded.cpp b/Telegram/SourceFiles/window/themes/window_themes_embedded.cpp
 index 2be03d2..dcaa9e2 100644
 --- a/Telegram/SourceFiles/window/themes/window_themes_embedded.cpp
