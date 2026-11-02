@@ -824,8 +824,22 @@ z+xLGR5TRyc$j5u&s1Ky#U4m%zi6!_zv?3U2AAM8Z9sx58jR(h&`7psH6?tO<B_Xu`
 zv;vP%$ZJ+7@=x)98&Fk%g!%&ge@K%5Z2Mo5<bR|-@ZaeFi!1rh693NspXL9Z|9_-D
 cu!;iW|M4|c6=321y$|(|cKzdJDgQnF7tA&yiU0rr
 
+diff --git a/Telegram/SourceFiles/chat_helpers/chat_helpers.style b/Telegram/SourceFiles/chat_helpers/chat_helpers.style
+index 6291aef..5181db6 100644
+--- a/Telegram/SourceFiles/chat_helpers/chat_helpers.style
++++ b/Telegram/SourceFiles/chat_helpers/chat_helpers.style
+@@ -1327,6 +1327,9 @@ historyComposeField: InputField(defaultInputField) {
+ historyComposeFieldMaxHeight: 224px;
+ historyComposeFieldFadeHeight: 6px;
+ historySendRight: 2px;
++// macOS ChatInputStateContainers: floating rounded compose container.
++historyComposeCapsuleMargin: 8px;
++historyComposeCapsuleRadius: 20px;
+ historySendPadding: 9px;
+ // historyMinHeight: 56px;
+ 
 diff --git a/Telegram/SourceFiles/dialogs/dialogs.style b/Telegram/SourceFiles/dialogs/dialogs.style
-index 922cac2..291d433 100644
+index 922cac2..d1bf1d8 100644
 --- a/Telegram/SourceFiles/dialogs/dialogs.style
 +++ b/Telegram/SourceFiles/dialogs/dialogs.style
 @@ -75,7 +75,7 @@ infoForumTopicIcon: ForumTopicIcon {
@@ -837,7 +851,7 @@ index 922cac2..291d433 100644
  dialogsUnreadHeight: 19px;
  dialogsUnreadPadding: 5px;
  
-@@ -85,28 +85,28 @@ dialogsRipple: RippleAnimation(defaultRippleAnimation) {
+@@ -85,28 +85,35 @@ dialogsRipple: RippleAnimation(defaultRippleAnimation) {
  
  dialogsTextFont: normalFont;
  dialogsTextStyle: defaultTextStyle;
@@ -858,13 +872,21 @@ index 922cac2..291d433 100644
 -	nameTop: 10px;
 -	textLeft: 68px;
 -	textTop: 34px;
+-}
 +	padding: margins(10px, 10px, 10px, 10px);
 +	photoSize: 50px;
 +	nameLeft: 70px;
-+	nameTop: 12px;
++	nameTop: 14px;
 +	textLeft: 70px;
-+	textTop: 36px;
- }
++	textTop: 37px;
++}
++// macOS ChatListRowView: name medium 14, selection = row inset 3, radius 14.
++dialogsNameFont: font(14px semibold);
++dialogsNameStyle: TextStyle(defaultTextStyle) {
++	font: dialogsNameFont;
++}
++dialogsRowSelectInset: 3px;
++dialogsRowSelectRadius: 14px;
  communityRequestableListItem: PeerListItem(defaultPeerListItem) {
 -	height: dialogsRowHeight;            // == st::defaultDialogRow.height (62px)
 -	photoSize: 46px;                     // == st::defaultDialogRow.photoSize
@@ -874,11 +896,455 @@ index 922cac2..291d433 100644
 +	height: dialogsRowHeight;            // == st::defaultDialogRow.height (70px)
 +	photoSize: 50px;                     // == st::defaultDialogRow.photoSize
 +	photoPosition: point(10px, 10px);    // == st::defaultDialogRow.padding left/top (10,10)
-+	namePosition: point(70px, 12px);     // == st::defaultDialogRow.nameLeft / nameTop
-+	statusPosition: point(70px, 36px);   // == st::defaultDialogRow.textLeft / textTop
++	namePosition: point(70px, 14px);     // == st::defaultDialogRow.nameLeft / nameTop
++	statusPosition: point(70px, 37px);   // == st::defaultDialogRow.textLeft / textTop
  }
  communityRequestableList: PeerList(defaultPeerList) {
  	item: communityRequestableListItem;
+diff --git a/Telegram/SourceFiles/dialogs/dialogs_entry.cpp b/Telegram/SourceFiles/dialogs/dialogs_entry.cpp
+index 2fe437a..9e7123b 100644
+--- a/Telegram/SourceFiles/dialogs/dialogs_entry.cpp
++++ b/Telegram/SourceFiles/dialogs/dialogs_entry.cpp
+@@ -333,7 +333,7 @@ const Ui::Text::String &Entry::chatListNameText() const {
+ 	if (_chatListNameVersion < version) {
+ 		_chatListNameVersion = version;
+ 		_chatListNameText.setText(
+-			st::semiboldTextStyle,
++			st::dialogsNameStyle,
+ 			chatListName(),
+ 			Ui::NameTextOptions());
+ 	}
+diff --git a/Telegram/SourceFiles/dialogs/dialogs_inner_widget.cpp b/Telegram/SourceFiles/dialogs/dialogs_inner_widget.cpp
+index 935f0eb..fe14edf 100644
+--- a/Telegram/SourceFiles/dialogs/dialogs_inner_widget.cpp
++++ b/Telegram/SourceFiles/dialogs/dialogs_inner_widget.cpp
+@@ -1913,16 +1913,20 @@ void InnerWidget::paintPeerSearchResult(
+ 		not_null<const PeerSearchResult*> result,
+ 		const Ui::PaintContext &context) {
+ 	QRect fullRect(0, 0, context.width, st::dialogsRowHeight);
+-	p.fillRect(
++	Ui::PaintRowBackground(
++		p,
+ 		fullRect,
+ 		(context.active
+ 			? st::dialogsBgActive
+ 			: context.selected
+ 			? st::dialogsBgOver
+-			: currentBg()));
+-	if (!context.active) {
+-		result->row.paintRipple(p, 0, 0, context.width);
+-	}
++			: currentBg()),
++		currentBg(),
++		[&] {
++			if (!context.active) {
++				result->row.paintRipple(p, 0, 0, context.width);
++			}
++		});
+ 
+ 	auto peer = result->peer;
+ 	auto userpicPeer = (peer->migrateTo() ? peer->migrateTo() : peer);
+@@ -1940,11 +1944,11 @@ void InnerWidget::paintPeerSearchResult(
+ 	if (const auto used = Ui::PaintRightButton(p, context)) {
+ 		namewidth -= used - st::dialogsUnreadPadding;
+ 	}
+-	QRect rectForName(nameleft, context.st->nameTop, namewidth, st::semiboldFont->height);
++	QRect rectForName(nameleft, context.st->nameTop, namewidth, st::dialogsNameFont->height);
+ 
+ 	if (result->name.isEmpty()) {
+ 		result->name.setText(
+-			st::semiboldTextStyle,
++			st::dialogsNameStyle,
+ 			peer->name(),
+ 			Ui::NameTextOptions());
+ 	}
+diff --git a/Telegram/SourceFiles/dialogs/dialogs_row.cpp b/Telegram/SourceFiles/dialogs/dialogs_row.cpp
+index 716b24f..2cc1561 100644
+--- a/Telegram/SourceFiles/dialogs/dialogs_row.cpp
++++ b/Telegram/SourceFiles/dialogs/dialogs_row.cpp
+@@ -985,7 +985,7 @@ const Ui::Text::String &FakeRow::name() const {
+ 			: nullptr;
+ 		const auto peer = from ? from : _item->history()->peer.get();
+ 		_name.setText(
+-			st::semiboldTextStyle,
++			st::dialogsNameStyle,
+ 			peer->name(),
+ 			Ui::NameTextOptions());
+ 	}
+diff --git a/Telegram/SourceFiles/dialogs/ui/dialogs_layout.cpp b/Telegram/SourceFiles/dialogs/ui/dialogs_layout.cpp
+index dd2fd64..46eeae0 100644
+--- a/Telegram/SourceFiles/dialogs/ui/dialogs_layout.cpp
++++ b/Telegram/SourceFiles/dialogs/ui/dialogs_layout.cpp
+@@ -102,7 +102,7 @@ void PaintRowTopRight(
+ 		: st::dialogsDateFg);
+ 	p.drawText(
+ 		rectForName.left() + rectForName.width() + st::dialogsDateSkip,
+-		rectForName.top() + st::semiboldFont->height - st::normalFont->descent,
++		rectForName.top() + st::dialogsNameFont->height - st::normalFont->descent,
+ 		text);
+ }
+ 
+@@ -436,6 +436,36 @@ void PaintDialogDate(
+ 	PaintRowTopRight(p, resolved.text, rectForName, context, resolved.width);
+ }
+ 
++} // namespace
++
++void PaintRowBackground(
++		QPainter &p,
++		QRect geometry,
++		const QBrush &bg,
++		const QBrush &base,
++		FnMut<void()> paintRipple) {
++	p.fillRect(geometry, base);
++	const auto inset = st::dialogsRowSelectInset;
++	const auto radius = st::dialogsRowSelectRadius;
++	auto path = QPainterPath();
++	path.addRoundedRect(
++		geometry.marginsRemoved({ inset, inset, inset, inset }),
++		radius,
++		radius);
++	auto hq = PainterHighQualityEnabler(p);
++	if (bg != base) {
++		p.fillPath(path, bg);
++	}
++	if (paintRipple) {
++		p.save();
++		p.setClipPath(path, Qt::IntersectClip);
++		paintRipple();
++		p.restore();
++	}
++}
++
++namespace {
++
+ template <typename PaintItemCallback>
+ void PaintRow(
+ 		Painter &p,
+@@ -484,13 +514,14 @@ void PaintRow(
+ 	if (swipeTranslation) {
+ 		p.translate(swipeMirrored ? swipeTranslation : -swipeTranslation, 0);
+ 	}
+-	p.fillRect(geometry, bg);
+-	if (!(flags & Flag::TopicJumpRipple)) {
+-		auto ripple = context.active
+-			? st::dialogsRippleBgActive
+-			: st::dialogsRippleBg;
+-		row->paintRipple(p, 0, 0, context.width, &ripple->c);
+-	}
++	PaintRowBackground(p, geometry, bg, context.currentBg, [&] {
++		if (!(flags & Flag::TopicJumpRipple)) {
++			auto ripple = context.active
++				? st::dialogsRippleBgActive
++				: st::dialogsRippleBg;
++			row->paintRipple(p, 0, 0, context.width, &ripple->c);
++		}
++	});
+ 
+ 	if (flags & Flag::SavedMessages) {
+ 		EmptyUserpic::PaintSavedMessages(
+@@ -565,7 +596,7 @@ void PaintRow(
+ 		nameleft,
+ 		context.st->nameTop,
+ 		namewidth,
+-		st::semiboldFont->height);
++		st::dialogsNameFont->height);
+ 
+ 	const auto promoted = (history && history->useTopPromotion())
+ 		&& !context.search;
+@@ -863,7 +894,7 @@ void PaintRow(
+ 		sendStateIcon->paint(p, rectForName.topLeft() + QPoint(rectForName.width(), 0), context.width);
+ 	}
+ 
+-	p.setFont(st::semiboldFont);
++	p.setFont(st::dialogsNameFont);
+ 	const auto paintPeerBadge = [&](int rowNameWidth) {
+ 		const auto badgeWidth = rowBadge.drawGetWidth(p, {
+ 			.peer = from,
+@@ -915,12 +946,12 @@ void PaintRow(
+ 			: (flags & Flag::MyNotes)
+ 			? tr::lng_my_notes(tr::now)
+ 			: tr::lng_hidden_author_messages(tr::now);
+-		const auto textWidth = st::semiboldFont->width(text);
++		const auto textWidth = st::dialogsNameFont->width(text);
+ 		if (!context.search && (flags & Flag::VerifyCodes)) {
+ 			paintPeerBadge(textWidth);
+ 		}
+ 		if (textWidth > rectForName.width()) {
+-			text = st::semiboldFont->elided(text, rectForName.width());
++			text = st::dialogsNameFont->elided(text, rectForName.width());
+ 		}
+ 		p.setPen(context.active
+ 			? st::dialogsNameFgActive
+@@ -975,7 +1006,7 @@ void PaintRow(
+ 				+ badgeWidth
+ 				+ st::dialogsMuteIconSkip;
+ 			const auto muteTop = rectForName.top()
+-				+ (st::semiboldFont->height - muteIcon.height()) / 2;
++				+ (st::dialogsNameFont->height - muteIcon.height()) / 2;
+ 			muteIcon.paint(p, muteLeft, muteTop, context.width);
+ 		}
+ 	} else if (hiddenSenderInfo) {
+@@ -1412,11 +1443,12 @@ void PaintCollapsedRow(
+ 		const QString &text,
+ 		int unread,
+ 		const PaintContext &context) {
+-	p.fillRect(
++	PaintRowBackground(
++		p,
+ 		QRect{ 0, 0, context.width, st::dialogsImportantBarHeight },
+-		context.selected ? st::dialogsBgOver : context.currentBg);
+-
+-	row.paintRipple(p, 0, 0, context.width);
++		context.selected ? st::dialogsBgOver : context.currentBg,
++		context.currentBg,
++		[&] { row.paintRipple(p, 0, 0, context.width); });
+ 
+ 	const auto unreadTop = (st::dialogsImportantBarHeight - st::dialogsUnreadHeight) / 2;
+ 	if (!context.narrow || !folder) {
+diff --git a/Telegram/SourceFiles/dialogs/ui/dialogs_layout.h b/Telegram/SourceFiles/dialogs/ui/dialogs_layout.h
+index 6c500a4..821d680 100644
+--- a/Telegram/SourceFiles/dialogs/ui/dialogs_layout.h
++++ b/Telegram/SourceFiles/dialogs/ui/dialogs_layout.h
+@@ -108,6 +108,14 @@ public:
+ 		bool textUpdated);
+ };
+ 
++// Fills geometry with base and the selection as a rounded inset plate.
++void PaintRowBackground(
++	QPainter &p,
++	QRect geometry,
++	const QBrush &bg,
++	const QBrush &base,
++	FnMut<void()> paintRipple = nullptr);
++
+ void PaintCollapsedRow(
+ 	Painter &p,
+ 	const BasicRow &row,
+diff --git a/Telegram/SourceFiles/history/history_widget.cpp b/Telegram/SourceFiles/history/history_widget.cpp
+index 562437c..6414269 100644
+--- a/Telegram/SourceFiles/history/history_widget.cpp
++++ b/Telegram/SourceFiles/history/history_widget.cpp
+@@ -7638,7 +7638,7 @@ void HistoryWidget::moveFieldControls() {
+ // (_botStart|_unblock|_joinChannel|_muteUnmute|_reportMessages)
+ 
+ 	auto buttonsBottom = bottom - _attachToggle->height();
+-	auto left = st::historySendRight;
++	auto left = st::historySendRight + st::historyComposeCapsuleMargin;
+ 	if (_botMenu) {
+ 		const auto skip = st::historyBotMenuSkip;
+ 		_botMenu->moveToLeft(left + skip, buttonsBottom + skip);
+@@ -7661,7 +7661,7 @@ void HistoryWidget::moveFieldControls() {
+ 			left,
+ 			bottom - fieldHeight() - st::historySendPadding);
+ 	}
+-	auto right = st::historySendRight;
++	auto right = st::historySendRight + st::historyComposeCapsuleMargin;
+ 	_send->moveToRight(right, buttonsBottom); right += _send->width();
+ 	_voiceRecordBar->moveToLeft(0, bottom - _voiceRecordBar->height());
+ 	_tabbedSelectorToggle->moveToRight(right, buttonsBottom);
+@@ -7731,6 +7731,7 @@ void HistoryWidget::updateFieldSize() {
+ 	auto fieldWidth = width()
+ 		- _attachToggle->width()
+ 		- st::historySendRight
++		- 2 * st::historyComposeCapsuleMargin
+ 		- _send->width()
+ 		- _tabbedSelectorToggle->width();
+ 	if (_botMenu) {
+@@ -8430,7 +8431,7 @@ void HistoryWidget::updateControlsGeometry() {
+ 		topShadowLeft,
+ 		_topBar->bottomNoMargins(),
+ 		width - topShadowLeft - topShadowRight,
+-		st::lineWidth);
++		0); // macOS: no separator under the top bar.
+ }
+ 
+ void HistoryWidget::itemRemoved(not_null<const HistoryItem*> item) {
+@@ -11474,7 +11475,18 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+ 	}
+ 	p.setInactive(
+ 		controller()->isGifPausedAtLeastFor(Window::GifPauseReason::Any));
+-	p.fillRect(myrtlrect(0, backy, width(), backh), st::historyReplyBg);
++	{
++		const auto skip = st::historyComposeCapsuleMargin;
++		const auto radius = st::historyComposeCapsuleRadius;
++		auto hq = PainterHighQualityEnabler(p);
++		p.setPen(Qt::NoPen);
++		p.setBrush(st::historyReplyBg);
++		p.drawRoundedRect(
++			myrtlrect(0, backy, width(), backh).marginsRemoved(
++				{ skip, skip / 2, skip, skip / 2 }),
++			radius,
++			radius);
++	}
+ 
+ 	const auto media = (!_previewDrawPreview && drawMsgText)
+ 		? drawMsgText->media()
+diff --git a/Telegram/SourceFiles/history/view/history_view_chat_section.cpp b/Telegram/SourceFiles/history/view/history_view_chat_section.cpp
+index e3c019e..26624a5 100644
+--- a/Telegram/SourceFiles/history/view/history_view_chat_section.cpp
++++ b/Telegram/SourceFiles/history/view/history_view_chat_section.cpp
+@@ -4485,7 +4485,7 @@ void ChatWidget::updateControlsGeometry() {
+ 		? base::make_optional(takeTopDelta() + _scrollTopDelta)
+ 		: 0;
+ 	_topBar->resizeToWidth(contentWidth);
+-	_topBarShadow->resize(contentWidth, st::lineWidth);
++	_topBarShadow->resize(contentWidth, 0); // macOS: no separator.
+ 	const auto tabsLeftSkip = _subsectionTabs
+ 		? _subsectionTabs->leftSkip()
+ 		: 0;
+diff --git a/Telegram/SourceFiles/history/view/history_view_top_bar_widget.cpp b/Telegram/SourceFiles/history/view/history_view_top_bar_widget.cpp
+index 30024a8..9bf8c66 100644
+--- a/Telegram/SourceFiles/history/view/history_view_top_bar_widget.cpp
++++ b/Telegram/SourceFiles/history/view/history_view_top_bar_widget.cpp
+@@ -550,7 +550,7 @@ void TopBarWidget::paintTopBar(Painter &p) {
+ 	auto nameleft = _leftTaken;
+ 	auto statusleft = nameleft;
+ 	auto nametop = st::topBarArrowPadding.top();
+-	auto statustop = st::topBarHeight - st::topBarArrowPadding.bottom() - st::dialogsTextFont->height;
++	auto statustop = st::topBarHeight - st::topBarArrowPadding.bottom() - st::topBarStatusFont->height;
+ 	auto namewidth = width()
+ 		- _rightTaken
+ 		- nameleft
+@@ -560,10 +560,10 @@ void TopBarWidget::paintTopBar(Painter &p) {
+ 	if (_chooseForReportReason) {
+ 		const auto text = _chooseForReportReason->optionText;
+ 		p.setPen(st::dialogsNameFg);
+-		p.setFont(st::semiboldFont);
++		p.setFont(st::topBarNameStyle.font);
+ 		p.drawTextLeft(nameleft, nametop, width(), text);
+ 
+-		p.setFont(st::dialogsTextFont);
++		p.setFont(st::topBarStatusFont);
+ 		p.setPen(st::historyStatusFg);
+ 		p.drawTextLeft(
+ 			nameleft,
+@@ -588,7 +588,7 @@ void TopBarWidget::paintTopBar(Painter &p) {
+ 			nametop,
+ 			namewidth);
+ 
+-		p.setFont(st::dialogsTextFont);
++		p.setFont(st::topBarStatusFont);
+ 		if (!paintConnectingState(p, nameleft, statustop, width())
+ 			&& !paintSendAction(
+ 				p,
+@@ -644,14 +644,14 @@ void TopBarWidget::paintTopBar(Painter &p) {
+ 		}
+ 	} else if (_activeChat.section == Section::Replies) {
+ 		p.setPen(st::dialogsNameFg);
+-		p.setFont(st::semiboldFont);
++		p.setFont(st::topBarNameStyle.font);
+ 		p.drawTextLeft(
+ 			nameleft,
+ 			nametop,
+ 			width(),
+ 			tr::lng_manage_discussion_group(tr::now));
+ 
+-		p.setFont(st::dialogsTextFont);
++		p.setFont(st::topBarStatusFont);
+ 		if (!paintConnectingState(p, statusleft, statustop, width())
+ 			&& !paintSendAction(
+ 				p,
+@@ -667,7 +667,7 @@ void TopBarWidget::paintTopBar(Painter &p) {
+ 		if (_titleNameVersion < namePeer->nameVersion()) {
+ 			_titleNameVersion = namePeer->nameVersion();
+ 			_title.setText(
+-				st::msgNameStyle,
++				st::topBarNameStyle,
+ 				TopBarNameText(namePeer, _activeChat),
+ 				Ui::NameTextOptions());
+ 		}
+@@ -690,7 +690,7 @@ void TopBarWidget::paintTopBar(Painter &p) {
+ 				nameleft,
+ 				nametop,
+ 				namewidth,
+-				st::msgNameStyle.font->height),
++				st::topBarNameStyle.font->height),
+ 			.nameWidth = _title.maxWidth(),
+ 			.outerWidth = width(),
+ 			.verified = &st::dialogsVerifiedIcon,
+@@ -713,7 +713,7 @@ void TopBarWidget::paintTopBar(Painter &p) {
+ 			.elisionLines = 1,
+ 		});
+ 
+-		p.setFont(st::dialogsTextFont);
++		p.setFont(st::topBarStatusFont);
+ 		if (!paintConnectingState(p, statusleft, statustop, width())
+ 			&& !paintSendAction(
+ 				p,
+@@ -824,7 +824,7 @@ void TopBarWidget::paintStatus(
+ 
+ QRect TopBarWidget::getMembersShowAreaGeometry() const {
+ 	int membersTextLeft = _leftTaken;
+-	int membersTextTop = st::topBarHeight - st::topBarArrowPadding.bottom() - st::dialogsTextFont->height;
++	int membersTextTop = st::topBarHeight - st::topBarArrowPadding.bottom() - st::topBarStatusFont->height;
+ 	int membersTextWidth = _titlePeerText.maxWidth();
+ 	int membersTextHeight = st::topBarHeight - membersTextTop;
+ 
+@@ -954,7 +954,7 @@ void TopBarWidget::setActiveChat(
+ 			Info::Profile::NameValue(
+ 				topic->peer()
+ 			) | rpl::on_next([=](const QString &name) {
+-				_titlePeerText.setText(st::dialogsTextStyle, name);
++				_titlePeerText.setText(st::topBarStatusStyle, name);
+ 				_titlePeerTextOnline = false;
+ 				update();
+ 			}, _activeChatLifetime);
+@@ -996,16 +996,16 @@ void TopBarWidget::handleEmojiInteractionSeen(const QString &emoticon) {
+ 				const auto skip = st::topBarArrowPadding.bottom();
+ 				update(
+ 					_leftTaken,
+-					st::topBarHeight - skip - st::dialogsTextFont->height,
++					st::topBarHeight - skip - st::topBarStatusFont->height,
+ 					seen->animation.width(),
+-					st::dialogsTextFont->height);
++					st::topBarStatusFont->height);
+ 			}
+ 		});
+ 		seen->scheduler.start();
+ 	}
+ 	seen->till = crl::now() + kEmojiInteractionSeenDuration;
+ 	seen->text.setText(
+-		st::dialogsTextStyle,
++		st::topBarStatusStyle,
+ 		tr::lng_user_action_watching_animations(tr::now, lt_emoji, emoticon),
+ 		Ui::NameTextOptions());
+ 	update();
+@@ -2005,7 +2005,7 @@ void TopBarWidget::updateOnlineDisplay() {
+ 		}
+ 	}
+ 	if (_titlePeerText.toString() != text) {
+-		_titlePeerText.setText(st::dialogsTextStyle, text);
++		_titlePeerText.setText(st::topBarStatusStyle, text);
+ 		_titlePeerTextOnline = titlePeerTextOnline;
+ 		updateMembersShowArea();
+ 		update();
+diff --git a/Telegram/SourceFiles/info/info.style b/Telegram/SourceFiles/info/info.style
+index aa58185..15bd172 100644
+--- a/Telegram/SourceFiles/info/info.style
++++ b/Telegram/SourceFiles/info/info.style
+@@ -916,11 +916,19 @@ editPeerUsernameFieldMargins: margins(22px, 0px, 22px, 0px);
+ historyTopBarBack: IconButton(infoTopBarBack) {
+ 	width: 52px;
+ }
+-topBarHeight: 54px;
++topBarHeight: 64px;
+ topBarMenuPosition: point(-6px, 45px);
+ topBarMenuGroupCallSkip: 20px;
+ topBarBack: icon {{ "title_back", lightButtonFg }};
+-topBarArrowPadding: margins(39px, 8px, 17px, 8px);
++topBarArrowPadding: margins(39px, 14px, 17px, 15px);
++// macOS ChatTitleBarView: title medium 15, status 12.
++topBarNameStyle: TextStyle(defaultTextStyle) {
++	font: font(15px semibold);
++}
++topBarStatusFont: font(12px);
++topBarStatusStyle: TextStyle(defaultTextStyle) {
++	font: topBarStatusFont;
++}
+ topBarNameRightPadding: 3px;
+ topBarClearButton: RoundButton(defaultLightButton) {
+ 	width: -18px;
 diff --git a/Telegram/SourceFiles/test/test_palette.cpp b/Telegram/SourceFiles/test/test_palette.cpp
 index 4d781ba..7232a6e 100644
 --- a/Telegram/SourceFiles/test/test_palette.cpp

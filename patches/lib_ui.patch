@@ -17378,3 +17378,121 @@ index a8d68ed..9407b87 100644
  
  	for (const auto &file : QDir(u":/gui/fonts/"_q).entryInfoList()) {
  		LoadCustomFont(Ui::Text::FontPath(file.canonicalFilePath()));
+diff --git a/ui/widgets/menu/menu_action.cpp b/ui/widgets/menu/menu_action.cpp
+index 4c16b67..068c37c 100644
+--- a/ui/widgets/menu/menu_action.cpp
++++ b/ui/widgets/menu/menu_action.cpp
+@@ -96,12 +96,18 @@ void Action::paintEvent(QPaintEvent *e) {
+ }
+ 
+ void Action::paintBackground(QPainter &p, bool selected) {
+-	if (selected && _st.itemBgOver->c.alpha() < 255) {
+-		p.fillRect(0, 0, width(), _height, _st.itemBg);
++	p.fillRect(0, 0, width(), _height, _st.itemBg);
++	if (selected) {
++		auto hq = PainterHighQualityEnabler(p);
++		p.setPen(Qt::NoPen);
++		p.setBrush(_st.itemBgOver);
++		p.drawRoundedRect(plateRect(), _st.itemBgRadius, _st.itemBgRadius);
+ 	}
+-	p.fillRect(
+-		QRect(0, 0, width(), _height),
+-		selected ? _st.itemBgOver : _st.itemBg);
++}
++
++QRect Action::plateRect() const {
++	return QRect(0, 0, width(), _height).marginsRemoved(
++		{ _st.itemBgSkip, 0, _st.itemBgSkip, 0 });
+ }
+ 
+ void Action::paintText(Painter &p) {
+@@ -118,7 +124,15 @@ void Action::paint(Painter &p) {
+ 	const auto selected = isSelected();
+ 	paintBackground(p, selected);
+ 	if (enabled) {
++		auto path = QPainterPath();
++		path.addRoundedRect(
++			plateRect(),
++			_st.itemBgRadius,
++			_st.itemBgRadius);
++		p.save();
++		p.setClipPath(path, Qt::IntersectClip);
+ 		RippleButton::paintRipple(p, 0, 0);
++		p.restore();
+ 	}
+ 	if (const auto icon = (selected ? _iconOver : _icon)) {
+ 		icon->paint(p, _st.itemIconPosition, width());
+diff --git a/ui/widgets/menu/menu_action.h b/ui/widgets/menu/menu_action.h
+index 2a2e689..b051a05 100644
+--- a/ui/widgets/menu/menu_action.h
++++ b/ui/widgets/menu/menu_action.h
+@@ -57,6 +57,7 @@ protected:
+ 	int contentHeight() const override;
+ 
+ 	void paintBackground(QPainter &p, bool selected);
++	[[nodiscard]] QRect plateRect() const;
+ 	void paintText(Painter &p);
+ 
+ private:
+diff --git a/ui/widgets/widgets.style b/ui/widgets/widgets.style
+index 8b8df7d..c84e81a 100644
+--- a/ui/widgets/widgets.style
++++ b/ui/widgets/widgets.style
+@@ -264,6 +264,9 @@ Menu {
+ 	widthMax: pixels;
+ 
+ 	ripple: RippleAnimation;
++
++	itemBgSkip: pixels;
++	itemBgRadius: pixels;
+ }
+ 
+ PopupMenu {
+@@ -966,7 +969,7 @@ defaultMenu: Menu {
+ 	itemFgShortcutOver: windowSubTextFgOver;
+ 	itemFgShortcutDisabled: menuFgDisabled;
+ 	itemIconPosition: point(0px, 0px);
+-	itemPadding: margins(17px, 8px, 17px, 7px);
++	itemPadding: margins(17px, 6px, 17px, 6px);
+ 	itemRightSkip: 6px;
+ 	itemStyle: defaultTextStyle;
+ 	itemToggle: defaultMenuToggle;
+@@ -981,6 +984,9 @@ defaultMenu: Menu {
+ 	widthMax: 300px;
+ 
+ 	ripple: defaultRippleAnimation;
++
++	itemBgSkip: 4px;
++	itemBgRadius: 5px;
+ }
+ defaultPopupMenu: PopupMenu {
+ 	shadow: defaultBoxShadow;
+@@ -992,7 +998,7 @@ defaultPopupMenu: PopupMenu {
+ 
+ 	menu: defaultMenu;
+ 
+-	radius: 8px;
++	radius: 18px;
+ 	duration: 150;
+ 	showDuration: 200;
+ }
+@@ -1693,8 +1699,8 @@ menuIconAttentionColor: attentionButtonFg;
+ menuIconSubmenuArrow: defaultMenuArrow;
+ 
+ menuWithIcons: Menu(defaultMenu) {
+-	itemIconPosition: point(15px, 5px);
+-	itemPadding: margins(54px, 8px, 17px, 8px);
++	itemIconPosition: point(15px, 2px);
++	itemPadding: margins(54px, 6px, 17px, 6px);
+ 
+ 	arrow: menuIconSubmenuArrow;
+ }
+@@ -1707,7 +1713,7 @@ menuAttention: Menu(defaultMenu) {
+ 	itemFgOver: attentionButtonFgOver;
+ }
+ popupMenuWithIcons: PopupMenu(defaultPopupMenu) {
+-	scrollPadding: margins(0px, 5px, 0px, 5px);
++	scrollPadding: margins(0px, 6px, 0px, 6px);
+ 	menu: menuWithIcons;
+ }
+ dropdownMenuWithIcons: DropdownMenu(defaultDropdownMenu) {
