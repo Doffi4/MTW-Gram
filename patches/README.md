@@ -17,6 +17,7 @@ git -C refs/tdesktop/Telegram/lib_ui apply --binary ../../../../patches/lib_ui.p
 | `lib_ui.patch` | меню: окно попапа radius 18, строка 28 (`itemPadding` 6/6), hover-плашка radius 5 с отступом 4 по бокам (`Menu.itemBgRadius/itemBgSkip`, `Menu::Action::paintBackground`) |
 | `tdesktop.patch` | поле ввода: скруглённая капсула radius 20, отступ 8 по бокам / 4 сверху-снизу, рамка 1px `inputBorderFg`, кнопки внутри — в `HistoryWidget` (`drawField`) и в `ComposeControls` (новые поля стиля `bgMargins`/`bgBorder`, сторис без изменений); не сделано: капсула «плавает» над историей (скролл под полем), панель ответа/редактирования остаётся полосой |
 | `tdesktop.patch` | шапка чата: высота 64, заголовок 15 medium (`topBarNameStyle`), статус 12 (`topBarStatusFont`), без разделителя под шапкой (HistoryWidget, ChatWidget) |
+| `tdesktop.patch` | левая колонка: шапка 48 с заголовком «Чаты» (15 medium) и кнопкой «новое» (меню: группа/канал/контакты), поиск-капсула 32 под ней (`dialogsMac*` в `dialogs.style`, `Widget::updateControlsGeometry`); архив — капсула «Архив ›» над списком вместо строки (`InnerWidget` всегда прячет строку архива); нижний таб-бар 48: контакты, звонки, чаты (бейдж непрочитанного), настройки = главное меню (гамбургер скрыт в широком режиме); не сделано: «плавающая» колонка с отступом 8, иконка лупы в поиске, архив в узком режиме недоступен |
 
 Цвета генерирует `tools/mac_palette.py` из `ColorPalette.swift` Telegram-macOS; после изменения сопоставления — перезапустить его и пересоздать патчи:
 

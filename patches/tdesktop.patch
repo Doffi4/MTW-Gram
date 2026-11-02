@@ -861,7 +861,7 @@ index 6291aef..6ede1ee 100644
  	field: historyComposeField;
  	send: historySend;
 diff --git a/Telegram/SourceFiles/dialogs/dialogs.style b/Telegram/SourceFiles/dialogs/dialogs.style
-index 922cac2..d1bf1d8 100644
+index 922cac2..fe22f55 100644
 --- a/Telegram/SourceFiles/dialogs/dialogs.style
 +++ b/Telegram/SourceFiles/dialogs/dialogs.style
 @@ -75,7 +75,7 @@ infoForumTopicIcon: ForumTopicIcon {
@@ -923,6 +923,58 @@ index 922cac2..d1bf1d8 100644
  }
  communityRequestableList: PeerList(defaultPeerList) {
  	item: communityRequestableListItem;
+@@ -314,7 +321,7 @@ dialogsSearchFrom: IconButton(dialogsCalendar) {
+ dialogsFilter: InputField(defaultInputField) {
+ 	textBg: filterInputInactiveBg;
+ 	textBgActive: filterInputActiveBg;
+-	textMargins: margins(12px, 8px, 30px, 5px);
++	textMargins: margins(12px, 7px, 30px, 4px);
+ 
+ 	placeholderFg: placeholderFg;
+ 	placeholderFgActive: placeholderFgActive;
+@@ -335,7 +342,7 @@ dialogsFilter: InputField(defaultInputField) {
+ 
+ 	style: defaultTextStyle;
+ 
+-	heightMin: 35px;
++	heightMin: 32px;
+ }
+ dialogsCancelSearchInPeer: IconButton(dialogsMenuToggle) {
+ 	icon: icon {{ "dialogs/dialogs_cancel_search", dialogsMenuIconFg }};
+@@ -968,3 +975,33 @@ restoreWindowsOfferClose: IconButton(dialogsCancelSearchInPeer) {
+ 	rippleAreaPosition: point(0px, 1px);
+ 	rippleAreaSize: 28px;
+ }
++
++// macOS chat list column: title row 48 + search capsule 32 + 8,
++// archive capsule, bottom tab bar 48 (TabBarView FloatingTabBarLayout).
++dialogsMacTitleHeight: 48px;
++dialogsMacHeaderHeight: 88px;
++dialogsMacSkip: 10px;
++dialogsMacTitle: FlatLabel(defaultFlatLabel) {
++	textFg: windowBoldFg;
++	style: TextStyle(defaultTextStyle) {
++		font: font(15px semibold);
++	}
++}
++dialogsMacCompose: IconButton(dialogsMenuToggle) {
++	icon: icon {{ "menu/edit", windowActiveTextFg }};
++	iconOver: icon {{ "menu/edit", windowActiveTextFg }};
++}
++dialogsMacArchiveHeight: 32px;
++dialogsMacArchiveSkip: 6px;
++dialogsMacArchiveRadius: 10px;
++dialogsMacArchiveIcon: icon {{ "menu/archive", windowSubTextFg }};
++dialogsMacTabsHeight: 48px;
++dialogsMacTab: IconButton(dialogsMenuToggle) {
++	width: 48px;
++	height: 48px;
++	rippleAreaPosition: point(4px, 4px);
++}
++dialogsMacTabContacts: icon {{ "menu/profile", dialogsMenuIconFg }};
++dialogsMacTabCalls: icon {{ "menu/phone", dialogsMenuIconFg }};
++dialogsMacTabChats: icon {{ "menu/chats", windowActiveTextFg }};
++dialogsMacTabSettings: icon {{ "menu/settings", dialogsMenuIconFg }};
 diff --git a/Telegram/SourceFiles/dialogs/dialogs_entry.cpp b/Telegram/SourceFiles/dialogs/dialogs_entry.cpp
 index 2fe437a..9e7123b 100644
 --- a/Telegram/SourceFiles/dialogs/dialogs_entry.cpp
@@ -937,10 +989,20 @@ index 2fe437a..9e7123b 100644
  			Ui::NameTextOptions());
  	}
 diff --git a/Telegram/SourceFiles/dialogs/dialogs_inner_widget.cpp b/Telegram/SourceFiles/dialogs/dialogs_inner_widget.cpp
-index 935f0eb..fe14edf 100644
+index 935f0eb..5f0190e 100644
 --- a/Telegram/SourceFiles/dialogs/dialogs_inner_widget.cpp
 +++ b/Telegram/SourceFiles/dialogs/dialogs_inner_widget.cpp
-@@ -1913,16 +1913,20 @@ void InnerWidget::paintPeerSearchResult(
+@@ -686,7 +686,8 @@ void InnerWidget::refreshWithCollapsedRows(bool toTop) {
+ 	const auto archive = !_shownList->empty()
+ 		? _shownList->begin()->get()->folder()
+ 		: nullptr;
+-	const auto inMainMenu = session().settings().archiveInMainMenu();
++	// macOS look: archive is a capsule above the list (Dialogs::Widget).
++	const auto inMainMenu = true;
+ 	if (archive && (session().settings().archiveCollapsed() || inMainMenu)) {
+ 		if (_selected && _selected->folder() == archive) {
+ 			_selected = nullptr;
+@@ -1913,16 +1914,20 @@ void InnerWidget::paintPeerSearchResult(
  		not_null<const PeerSearchResult*> result,
  		const Ui::PaintContext &context) {
  	QRect fullRect(0, 0, context.width, st::dialogsRowHeight);
@@ -966,7 +1028,7 @@ index 935f0eb..fe14edf 100644
  
  	auto peer = result->peer;
  	auto userpicPeer = (peer->migrateTo() ? peer->migrateTo() : peer);
-@@ -1940,11 +1944,11 @@ void InnerWidget::paintPeerSearchResult(
+@@ -1940,11 +1945,11 @@ void InnerWidget::paintPeerSearchResult(
  	if (const auto used = Ui::PaintRightButton(p, context)) {
  		namewidth -= used - st::dialogsUnreadPadding;
  	}
@@ -980,6 +1042,16 @@ index 935f0eb..fe14edf 100644
  			peer->name(),
  			Ui::NameTextOptions());
  	}
+@@ -5010,8 +5015,7 @@ bool InnerWidget::needCollapsedRowsRefresh() const {
+ 		&& (_collapsedRows.back()->folder != nullptr);
+ 	const auto archiveIsCollapsed = (archive != nullptr)
+ 		&& session().settings().archiveCollapsed();
+-	const auto archiveIsInMainMenu = (archive != nullptr)
+-		&& session().settings().archiveInMainMenu();
++	const auto archiveIsInMainMenu = (archive != nullptr);
+ 	return archiveIsInMainMenu
+ 		? (collapsedHasArchive || !_skipTopDialog)
+ 		: archiveIsCollapsed
 diff --git a/Telegram/SourceFiles/dialogs/dialogs_row.cpp b/Telegram/SourceFiles/dialogs/dialogs_row.cpp
 index 716b24f..2cc1561 100644
 --- a/Telegram/SourceFiles/dialogs/dialogs_row.cpp
@@ -993,6 +1065,397 @@ index 716b24f..2cc1561 100644
  			peer->name(),
  			Ui::NameTextOptions());
  	}
+diff --git a/Telegram/SourceFiles/dialogs/dialogs_widget.cpp b/Telegram/SourceFiles/dialogs/dialogs_widget.cpp
+index 4529103..247142a 100644
+--- a/Telegram/SourceFiles/dialogs/dialogs_widget.cpp
++++ b/Telegram/SourceFiles/dialogs/dialogs_widget.cpp
+@@ -53,6 +53,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
+ #include "ui/screen_reader_mode.h"
+ #include "ui/ui_utility.h"
+ #include "lang/lang_keys.h"
++#include "boxes/peer_list_controllers.h"
++#include "calls/calls_box_controller.h"
++#include "ui/unread_badge_paint.h"
++#include "ui/widgets/labels.h"
++#include "ui/widgets/popup_menu.h"
+ #include "mainwindow.h"
+ #include "mainwidget.h"
+ #include "main/main_domain.h"
+@@ -100,6 +105,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
+ #include "styles/style_chat_helpers.h"
+ #include "styles/style_dialogs_widget.h"
+ #include "styles/style_info.h"
++#include "styles/style_menu_icons.h"
+ #include "styles/style_window.h"
+ #include "base/qt/qt_common_adapters.h"
+ 
+@@ -454,6 +460,9 @@ Widget::Widget(
+ , _lockUnlock(
+ 	_searchControls,
+ 	object_ptr<Ui::IconButton>(this, st::dialogsLock))
++, _macTitle(_searchControls, tr::lng_recent_chats(), st::dialogsMacTitle)
++, _macCompose(_searchControls, st::dialogsMacCompose)
++, _macArchive(this)
+ , _scroll(this)
+ , _scrollToTop(_scroll, st::dialogsToUp)
+ , _stories((_layout != Layout::Child)
+@@ -723,6 +732,7 @@ Widget::Widget(
+ 	});
+ 
+ 	setupMainMenuToggle();
++	setupMacColumn();
+ 	setupShortcuts();
+ 	if (_stories) {
+ 		setupStories();
+@@ -1746,6 +1756,154 @@ void Widget::setupMainMenuToggle() {
+ 	}, _mainMenu.toggle->lifetime());
+ }
+ 
++void Widget::setupMacColumn() {
++	_macTitle->setAttribute(Qt::WA_TransparentForMouseEvents);
++	_macCompose->setClickedCallback([=] {
++		_macComposeMenu = base::make_unique_q<Ui::PopupMenu>(
++			_macCompose,
++			st::popupMenuWithIcons);
++		_macComposeMenu->addAction(tr::lng_create_group_title(tr::now), [=] {
++			controller()->showNewGroup();
++		}, &st::menuIconGroups);
++		_macComposeMenu->addAction(tr::lng_create_channel_title(tr::now), [=] {
++			controller()->showNewChannel();
++		}, &st::menuIconChannel);
++		_macComposeMenu->addAction(tr::lng_menu_contacts(tr::now), [=] {
++			controller()->show(PrepareContactsBox(controller()));
++		}, &st::menuIconUserShow);
++		_macComposeMenu->popup(_macCompose->mapToGlobal(
++			QPoint(0, _macCompose->height())));
++	});
++
++	_macArchive->setClickedCallback([=] {
++		if (const auto folder = session().data().folderLoaded(
++				Data::Folder::kId)) {
++			controller()->openFolder(folder);
++		}
++	});
++	_macArchive->paintRequest() | rpl::on_next([=] {
++		auto p = QPainter(_macArchive);
++		auto hq = PainterHighQualityEnabler(p);
++		p.setPen(Qt::NoPen);
++		p.setBrush(_macArchive->isOver() ? st::windowBgRipple : st::windowBgOver);
++		const auto r = st::dialogsMacArchiveRadius;
++		p.drawRoundedRect(_macArchive->rect(), r, r);
++		const auto &font = st::normalFont;
++		const auto text = tr::lng_archived_name(tr::now) + QString(' ') + QChar(0x203A);
++		const auto &icon = st::dialogsMacArchiveIcon;
++		const auto skip = st::dialogsFilterSkip * 2;
++		const auto full = icon.width() + skip + font->width(text);
++		const auto left = (_macArchive->width() - full) / 2;
++		icon.paint(
++			p,
++			left,
++			(_macArchive->height() - icon.height()) / 2,
++			_macArchive->width());
++		p.setPen(st::windowSubTextFg);
++		p.setFont(font);
++		p.drawText(
++			left + icon.width() + skip,
++			(_macArchive->height() - font->height) / 2 + font->ascent,
++			text);
++	}, _macArchive->lifetime());
++	session().data().chatsListChanges(
++	) | rpl::on_next([=] {
++		refreshMacArchive();
++	}, _macArchive->lifetime());
++	refreshMacArchive();
++
++	if (_layout == Layout::Child) {
++		return;
++	}
++	_macTabs.create(this);
++	_macTabs->resize(width(), st::dialogsMacTabsHeight);
++	const auto tabs = _macTabs.data();
++	tabs->paintRequest() | rpl::on_next([=] {
++		QPainter(tabs).fillRect(
++			0,
++			0,
++			tabs->width(),
++			st::lineWidth,
++			st::shadowFg);
++	}, tabs->lifetime());
++	auto buttons = std::vector<not_null<Ui::IconButton*>>();
++	const auto add = [&](
++			const style::icon &icon,
++			Fn<void()> callback) {
++		const auto button = Ui::CreateChild<Ui::IconButton>(
++			tabs,
++			st::dialogsMacTab);
++		button->setIconOverride(&icon, &icon);
++		button->setClickedCallback(std::move(callback));
++		buttons.push_back(button);
++		return button;
++	};
++	add(st::dialogsMacTabContacts, [=] {
++		controller()->show(PrepareContactsBox(controller()));
++	})->setAccessibleName(tr::lng_menu_contacts(tr::now));
++	add(st::dialogsMacTabCalls, [=] {
++		::Calls::ShowCallsBox(controller());
++	})->setAccessibleName(tr::lng_menu_calls(tr::now));
++	const auto chats = add(st::dialogsMacTabChats, [=] {
++		if (_openedForum) {
++			controller()->closeForum();
++		} else if (_openedFolder) {
++			controller()->closeFolder();
++		} else {
++			_scroll->scrollToY(0);
++		}
++	});
++	chats->setAccessibleName(tr::lng_recent_chats(tr::now));
++	// The main menu (hamburger) lives behind the settings tab.
++	add(st::dialogsMacTabSettings, [=] {
++		showMainMenu();
++	})->setAccessibleName(tr::lng_menu_settings(tr::now));
++
++	const auto badge = Ui::CreateChild<Ui::RpWidget>(tabs);
++	badge->setAttribute(Qt::WA_TransparentForMouseEvents);
++	badge->paintRequest() | rpl::on_next([=] {
++		const auto count = session().data().unreadBadge();
++		if (!count) {
++			return;
++		}
++		auto p = QPainter(badge);
++		auto st = Ui::UnreadBadgeStyle();
++		st.muted = session().data().unreadBadgeMuted();
++		st.align = style::al_left;
++		Ui::PaintUnreadBadge(p, QString::number(count), 0, 0, st);
++	}, badge->lifetime());
++	session().data().unreadBadgeChanges(
++	) | rpl::on_next([=] {
++		badge->update();
++	}, badge->lifetime());
++
++	tabs->widthValue() | rpl::on_next([=](int width) {
++		const auto count = int(buttons.size());
++		for (auto i = 0; i != count; ++i) {
++			const auto button = buttons[i];
++			button->moveToLeft(
++				(width * (2 * i + 1)) / (2 * count) - button->width() / 2,
++				(tabs->height() - button->height()) / 2);
++		}
++		const auto size = st::dialogsMacTabsHeight / 2;
++		badge->setGeometry(
++			chats->x() + chats->width() / 2 + 2 * st::dialogsFilterSkip,
++			chats->y() + st::dialogsFilterSkip,
++			size,
++			size);
++	}, tabs->lifetime());
++}
++
++void Widget::refreshMacArchive() {
++	const auto folder = session().data().folderLoaded(Data::Folder::kId);
++	const auto has = folder
++		&& (!folder->chatsList()->empty() || folder->storiesCount() > 0);
++	if (_macArchiveHas != has) {
++		_macArchiveHas = has;
++		updateControlsGeometry();
++	}
++}
++
+ void Widget::setupStories() {
+ 	_stories->verticalScrollEvents(
+ 	) | rpl::on_next([=](not_null<QWheelEvent*> e) {
+@@ -2044,13 +2202,17 @@ void Widget::updateLockUnlockPosition() {
+ 	const auto stories = (_stories && !_stories->isHidden())
+ 		? _stories->collapsedGeometryCurrent()
+ 		: Stories::List::CollapsedGeometry();
+-	const auto simple = _search->x() + _search->width();
++	const auto simple = _macHeader
++		? _macCompose->x()
++		: (_search->x() + _search->width());
+ 	const auto right = stories.geometry.isEmpty()
+ 		? simple
+ 		: anim::interpolate(stories.geometry.x(), simple, stories.expanded);
+ 	_lockUnlock->move(
+ 		right - _lockUnlock->width(),
+-		st::dialogsFilterPadding.y());
++		_macHeader
++			? (st::dialogsMacTitleHeight - _lockUnlock->height()) / 2
++			: st::dialogsFilterPadding.y());
+ }
+ 
+ void Widget::updateHasFocus(not_null<QWidget*> focused) {
+@@ -4662,16 +4824,29 @@ void Widget::updateControlsGeometry() {
+ 		? ((smallw - ratiow) / float64(smallw - _narrowWidth))
+ 		: 0.;
+ 
+-	auto filterLeft = (controller()->filtersWidth()
+-		? st::dialogsFilterSkip
+-		: (st::dialogsFilterPadding.x() + _mainMenu.toggle->width()))
+-		+ st::dialogsFilterPadding.x();
+-	const auto filterRight = st::dialogsFilterSkip
+-		+ st::dialogsFilterPadding.x();
++	// macOS header (title row + search capsule) unless inside a folder.
++	const auto macRatio = (_openedFolder || _openedForum || _openedCommunity)
++		? 0.
++		: (1. - narrowRatio);
++	_macHeader = (macRatio == 1.);
++	_macTitle->setVisible(_macHeader);
++	_macCompose->setVisible(_macHeader);
++	auto filterLeft = _macHeader
++		? st::dialogsMacSkip
++		: (controller()->filtersWidth()
++			? st::dialogsFilterSkip
++			: (st::dialogsFilterPadding.x() + _mainMenu.toggle->width()))
++			+ st::dialogsFilterPadding.x();
++	const auto filterRight = _macHeader
++		? st::dialogsMacSkip
++		: (st::dialogsFilterSkip + st::dialogsFilterPadding.x());
+ 	const auto filterWidth = std::max(ratiow, smallw)
+ 		- filterLeft
+ 		- filterRight;
+-	const auto filterAreaHeight = st::topBarHeight;
++	const auto filterAreaHeight = anim::interpolate(
++		st::topBarHeight,
++		st::dialogsMacHeaderHeight,
++		macRatio);
+ 	_searchControls->setGeometry(0, filterAreaTop, ratiow, filterAreaHeight);
+ 	if (_subsectionTopBar) {
+ 		_subsectionTopBar->setGeometryWithNarrowRatio(
+@@ -4680,7 +4855,17 @@ void Widget::updateControlsGeometry() {
+ 			narrowRatio);
+ 	}
+ 
+-	auto filterTop = (filterAreaHeight - _search->height()) / 2;
++	auto filterTop = anim::interpolate(
++		(st::topBarHeight - _search->height()) / 2,
++		st::dialogsMacTitleHeight,
++		macRatio);
++	_macCompose->moveToLeft(
++		ratiow - st::dialogsMacSkip - _macCompose->width() + st::dialogsFilterSkip,
++		(st::dialogsMacTitleHeight - _macCompose->height()) / 2);
++	_macTitle->resizeToWidth(_macTitle->textMaxWidth());
++	_macTitle->moveToLeft(
++		(ratiow - _macTitle->width()) / 2,
++		(st::dialogsMacTitleHeight - _macTitle->height()) / 2);
+ 	filterLeft = anim::interpolate(filterLeft, _narrowWidth, narrowRatio);
+ 	_search->setGeometryToLeft(
+ 		filterLeft,
+@@ -4689,14 +4874,14 @@ void Widget::updateControlsGeometry() {
+ 		_search->height());
+ 
+ 	auto mainMenuLeft = anim::interpolate(
+-		st::dialogsFilterPadding.x(),
++		_macHeader ? -_mainMenu.toggle->width() : st::dialogsFilterPadding.x(),
+ 		(_narrowWidth - _mainMenu.toggle->width()) / 2,
+ 		narrowRatio);
+ 	_mainMenu.toggle->moveToLeft(mainMenuLeft, st::dialogsFilterPadding.y());
+ 	_mainMenu.under->setGeometry(
+ 		0,
+ 		0,
+-		filterLeft,
++		_macHeader ? 0 : filterLeft,
+ 		_mainMenu.toggle->y()
+ 			+ _mainMenu.toggle->height()
+ 			+ st::dialogsFilterPadding.y());
+@@ -4729,9 +4914,14 @@ void Widget::updateControlsGeometry() {
+ 					- st::dialogsStories.photoLeft),
+ 				_narrowWidth,
+ 				narrowRatio)
++			: _macHeader
++			? _macCompose->x()
+ 			: (filterLeft + filterWidth);
++		const auto storiesTop = _macHeader
++			? (st::dialogsMacTitleHeight - storiesHeight) / 2
++			: (filterTop + added);
+ 		_stories->setLayoutConstraints(
+-			{ storiesLeft, filterTop + added },
++			{ storiesLeft, storiesTop },
+ 			inFolderTitle ? style::al_left : style::al_right,
+ 			{ 0, expandedStoriesTop, barw, st::dialogsStoriesFull.height });
+ 	}
+@@ -4746,6 +4936,9 @@ void Widget::updateControlsGeometry() {
+ 	updateLockUnlockPosition();
+ 
+ 	auto bottomSkip = 0;
++	if (_macTabs) {
++		_macTabs->setVisible(narrowRatio == 0.);
++	}
+ 	const auto putBottomButton = [&](auto &button) {
+ 		if (button && !button->isHidden()) {
+ 			const auto buttonHeight = button->height();
+@@ -4757,6 +4950,7 @@ void Widget::updateControlsGeometry() {
+ 				buttonHeight);
+ 		}
+ 	};
++	putBottomButton(_macTabs);
+ 	putBottomButton(_updateTelegram);
+ 	putBottomButton(_downloadBar);
+ 	putBottomButton(_loadMoreChats);
+@@ -4821,7 +5015,7 @@ void Widget::updateControlsGeometry() {
+ 		if (_chatFilters) {
+ 			_chatFilters->move(0, chatFiltersTop);
+ 		}
+-		const auto scrollTop = chatFiltersTop
++		auto scrollTop = chatFiltersTop
+ 			+ ((_chatFilters
+ 				&& _searchState.query.isEmpty()
+ 				&& !_openedForum
+@@ -4829,6 +5023,21 @@ void Widget::updateControlsGeometry() {
+ 				&& !searchInPeer())
+ 				? (_chatFilters->height() * (1. - narrowRatio))
+ 				: 0);
++		const auto macArchive = _macHeader
++			&& _macArchiveHas
++			&& _searchState.query.isEmpty()
++			&& !_searchState.community
++			&& !searchInPeer();
++		_macArchive->setVisible(macArchive);
++		if (macArchive) {
++			_macArchive->setGeometry(
++				st::dialogsMacSkip,
++				scrollTop,
++				barw - 2 * st::dialogsMacSkip,
++				st::dialogsMacArchiveHeight);
++			scrollTop += st::dialogsMacArchiveHeight
++				+ st::dialogsMacArchiveSkip;
++		}
+ 		const auto tabsSkip = (_suggestions && _suggestions->tabsOnly())
+ 			? _suggestions->tabsHeight()
+ 			: 0;
+diff --git a/Telegram/SourceFiles/dialogs/dialogs_widget.h b/Telegram/SourceFiles/dialogs/dialogs_widget.h
+index 89eb97d..a3db288 100644
+--- a/Telegram/SourceFiles/dialogs/dialogs_widget.h
++++ b/Telegram/SourceFiles/dialogs/dialogs_widget.h
+@@ -42,6 +42,7 @@ class ContactStatus;
+ namespace Ui {
+ class AbstractButton;
+ class IconButton;
++class FlatLabel;
+ class PopupMenu;
+ class DropdownMenu;
+ class FlatButton;
+@@ -211,6 +212,8 @@ private:
+ 	void setupFrozenAccountBar();
+ 	void setupConnectingWidget();
+ 	void setupMainMenuToggle();
++	void setupMacColumn();
++	void refreshMacArchive();
+ 	void setupMoreChatsBar();
+ 	void switchToChatsFilter(FilterId id);
+ 	[[nodiscard]] QPixmap grabForChatsFilterSlide();
+@@ -348,6 +351,14 @@ private:
+ 	object_ptr<Ui::FadeWrapScaled<Ui::IconButton>> _jumpToDate;
+ 	object_ptr<Ui::CrossButton> _cancelSearch;
+ 	object_ptr<Ui::FadeWrapScaled<Ui::IconButton>> _lockUnlock;
++	// macOS look: title row, archive capsule above the list, bottom tabs.
++	object_ptr<Ui::FlatLabel> _macTitle;
++	object_ptr<Ui::IconButton> _macCompose;
++	base::unique_qptr<Ui::PopupMenu> _macComposeMenu;
++	object_ptr<Ui::AbstractButton> _macArchive;
++	object_ptr<Ui::RpWidget> _macTabs = { nullptr };
++	bool _macHeader = false;
++	bool _macArchiveHas = false;
+ 
+ 	std::unique_ptr<Ui::MoreChatsBar> _moreChatsBar;
+ 
 diff --git a/Telegram/SourceFiles/dialogs/ui/dialogs_layout.cpp b/Telegram/SourceFiles/dialogs/ui/dialogs_layout.cpp
 index dd2fd64..46eeae0 100644
 --- a/Telegram/SourceFiles/dialogs/ui/dialogs_layout.cpp
