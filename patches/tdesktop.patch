@@ -825,7 +825,7 @@ zv;vP%$ZJ+7@=x)98&Fk%g!%&ge@K%5Z2Mo5<bR|-@ZaeFi!1rh693NspXL9Z|9_-D
 cu!;iW|M4|c6=321y$|(|cKzdJDgQnF7tA&yiU0rr
 
 diff --git a/Telegram/SourceFiles/chat_helpers/chat_helpers.style b/Telegram/SourceFiles/chat_helpers/chat_helpers.style
-index 6291aef..d83a783 100644
+index 6291aef..0106c35 100644
 --- a/Telegram/SourceFiles/chat_helpers/chat_helpers.style
 +++ b/Telegram/SourceFiles/chat_helpers/chat_helpers.style
 @@ -258,6 +258,8 @@ ComposeControls {
@@ -847,6 +847,15 @@ index 6291aef..d83a783 100644
  historySendPadding: 9px;
  // historyMinHeight: 56px;
  
+@@ -1412,7 +1417,7 @@ historyAttachEmojiInner: IconButton(historyAttach) {
+ }
+ historyAttachEmoji: EmojiButton {
+ 	inner: historyAttachEmojiInner;
+-	bg: historyComposeAreaBg;
++	bg: transparent; // Lets the compose capsule border show through.
+ 	lineFg: historyEmojiCircleFg;
+ 	lineFgOver: historyEmojiCircleFgOver;
+ }
 @@ -1652,8 +1657,10 @@ defaultChooseSendAs: ChooseSendAs {
  }
  defaultComposeControls: ComposeControls {
@@ -1637,11 +1646,55 @@ index 6c500a4..821d680 100644
  void PaintCollapsedRow(
  	Painter &p,
  	const BasicRow &row,
+diff --git a/Telegram/SourceFiles/history/history_inner_widget.cpp b/Telegram/SourceFiles/history/history_inner_widget.cpp
+index 40897a8..9bd8318 100644
+--- a/Telegram/SourceFiles/history/history_inner_widget.cpp
++++ b/Telegram/SourceFiles/history/history_inner_widget.cpp
+@@ -1668,6 +1668,8 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
+ 		context.translate(0, -top);
+ 		p.translate(0, top);
+ 		const auto &sendingAnimation = _controller->sendingAnimation();
++		// macOS: rows sliding in from below the reveal edge fade in.
++		const auto revealBottom = htop + _history->height() - _revealHeight;
+ 		while (top < drawToY) {
+ 			while (nextGapIndex < int(collapseGaps().size())) {
+ 				const auto &gap = collapseGaps()[nextGapIndex];
+@@ -1695,7 +1697,14 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
+ 				context.fullMessageSelected = selection.fullMessageSelected;
+ 				context.messageSelection = selection.messageSelection;
+ 				context.highlight = _widget->itemHighlight(item);
++				const auto hidden = (_revealHeight > 0 && height > 0)
++					? (top - collapseShift + height - revealBottom)
++					: 0;
++				if (hidden > 0) {
++					p.setOpacity(1. - std::min(hidden, height) / float64(height));
++				}
+ 				view->draw(p, context);
++				p.setOpacity(1.);
+ 				processPainted(view, top, height);
+ 			}
+ 			top += height;
 diff --git a/Telegram/SourceFiles/history/history_widget.cpp b/Telegram/SourceFiles/history/history_widget.cpp
-index 562437c..f6fb37d 100644
+index 562437c..8f446d9 100644
 --- a/Telegram/SourceFiles/history/history_widget.cpp
 +++ b/Telegram/SourceFiles/history/history_widget.cpp
-@@ -7638,7 +7638,7 @@ void HistoryWidget::moveFieldControls() {
+@@ -236,6 +236,7 @@ constexpr auto kDisplayEditTimeWarningMs = 300 * 1000;
+ constexpr auto kFullDayInMs = 86400 * 1000;
+ constexpr auto kSaveDraftTimeout = crl::time(1000);
+ constexpr auto kSaveDraftAnywayTimeout = 5 * crl::time(1000);
++constexpr auto kFieldGrowDuration = crl::time(200); // macOS ChatInputView.
+ constexpr auto kSaveCloudDraftIdleTimeout = 14 * crl::time(1000);
+ constexpr auto kRefreshSlowmodeLabelTimeout = crl::time(200);
+ constexpr auto kCommonModifiers = 0
+@@ -581,6 +582,7 @@ HistoryWidget::HistoryWidget(
+ 		return false;
+ 	});
+ 	InitMessageFieldFade(_field, st::historyComposeField.textBg);
++	_field->setHeightAnimationDuration(kFieldGrowDuration);
+ 
+ 	setupFastButtonMode();
+ 	initAiButton();
+@@ -7638,7 +7640,7 @@ void HistoryWidget::moveFieldControls() {
  // (_botStart|_unblock|_joinChannel|_muteUnmute|_reportMessages)
  
  	auto buttonsBottom = bottom - _attachToggle->height();
@@ -1650,7 +1703,7 @@ index 562437c..f6fb37d 100644
  	if (_botMenu) {
  		const auto skip = st::historyBotMenuSkip;
  		_botMenu->moveToLeft(left + skip, buttonsBottom + skip);
-@@ -7661,7 +7661,7 @@ void HistoryWidget::moveFieldControls() {
+@@ -7661,7 +7663,7 @@ void HistoryWidget::moveFieldControls() {
  			left,
  			bottom - fieldHeight() - st::historySendPadding);
  	}
@@ -1659,7 +1712,7 @@ index 562437c..f6fb37d 100644
  	_send->moveToRight(right, buttonsBottom); right += _send->width();
  	_voiceRecordBar->moveToLeft(0, bottom - _voiceRecordBar->height());
  	_tabbedSelectorToggle->moveToRight(right, buttonsBottom);
-@@ -7731,6 +7731,7 @@ void HistoryWidget::updateFieldSize() {
+@@ -7731,6 +7733,7 @@ void HistoryWidget::updateFieldSize() {
  	auto fieldWidth = width()
  		- _attachToggle->width()
  		- st::historySendRight
@@ -1667,7 +1720,7 @@ index 562437c..f6fb37d 100644
  		- _send->width()
  		- _tabbedSelectorToggle->width();
  	if (_botMenu) {
-@@ -8430,7 +8431,7 @@ void HistoryWidget::updateControlsGeometry() {
+@@ -8430,7 +8433,7 @@ void HistoryWidget::updateControlsGeometry() {
  		topShadowLeft,
  		_topBar->bottomNoMargins(),
  		width - topShadowLeft - topShadowRight,
@@ -1676,7 +1729,16 @@ index 562437c..f6fb37d 100644
  }
  
  void HistoryWidget::itemRemoved(not_null<const HistoryItem*> item) {
-@@ -11474,7 +11475,23 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+@@ -8955,7 +8958,7 @@ void HistoryWidget::startItemRevealAnimations() {
+ 							0.,
+ 							1.,
+ 							reveal ? reveal->duration : st::itemRevealDuration,
+-							reveal ? anim::linear : anim::easeOutCirc);
++							reveal ? anim::linear : anim::macEaseOut);
+ 						if (item->out() || _history->peer->isSelf()) {
+ 							_list->theme()->rotateComplexGradientBackground();
+ 						}
+@@ -11474,7 +11477,23 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
  	}
  	p.setInactive(
  		controller()->isGifPausedAtLeastFor(Window::GifPauseReason::Any));
@@ -1702,10 +1764,20 @@ index 562437c..f6fb37d 100644
  	const auto media = (!_previewDrawPreview && drawMsgText)
  		? drawMsgText->media()
 diff --git a/Telegram/SourceFiles/history/view/controls/history_view_compose_controls.cpp b/Telegram/SourceFiles/history/view/controls/history_view_compose_controls.cpp
-index aaa4ae0..c8667e2 100644
+index aaa4ae0..4f6e4db 100644
 --- a/Telegram/SourceFiles/history/view/controls/history_view_compose_controls.cpp
 +++ b/Telegram/SourceFiles/history/view/controls/history_view_compose_controls.cpp
-@@ -5734,7 +5734,15 @@ void ComposeControls::paintBackground(QPainter &p, QRect full, QRect clip) {
+@@ -3271,6 +3271,9 @@ void ComposeControls::initField() {
+ 		return false;
+ 	});
+ 	InitMessageFieldFade(_field, _st.field.textBg);
++	if (_regularWindow) {
++		_field->setHeightAnimationDuration(200); // macOS ChatInputView.
++	}
+ 	_field->setEditLinkCallback(
+ 		DefaultEditLinkCallback(_show, _field, &_st.boxField));
+ 	_field->setEditLanguageCallback(DefaultEditLanguageCallback(_show));
+@@ -5734,7 +5737,15 @@ void ComposeControls::paintBackground(QPainter &p, QRect full, QRect clip) {
  	if (_backgroundRect) {
  		auto hq = PainterHighQualityEnabler(p);
  		p.setBrush(_st.bg);
@@ -1735,6 +1807,49 @@ index e3c019e..26624a5 100644
  	const auto tabsLeftSkip = _subsectionTabs
  		? _subsectionTabs->leftSkip()
  		: 0;
+diff --git a/Telegram/SourceFiles/history/view/history_view_corner_buttons.cpp b/Telegram/SourceFiles/history/view/history_view_corner_buttons.cpp
+index 3fa5e74..80ecc14 100644
+--- a/Telegram/SourceFiles/history/view/history_view_corner_buttons.cpp
++++ b/Telegram/SourceFiles/history/view/history_view_corner_buttons.cpp
+@@ -452,7 +452,8 @@ void CornerButtons::updateVisibility(Type type, bool shown) {
+ 			[=] { updatePositions(); },
+ 			shown ? 0. : 1.,
+ 			shown ? 1. : 0.,
+-			st::historyToDownDuration);
++			200, // macOS ChatController: 0.2 s easeOut.
++			anim::macEaseOut);
+ 	}
+ }
+ 
+diff --git a/Telegram/SourceFiles/history/view/history_view_list_widget.cpp b/Telegram/SourceFiles/history/view/history_view_list_widget.cpp
+index 555a33e..3b2b12b 100644
+--- a/Telegram/SourceFiles/history/view/history_view_list_widget.cpp
++++ b/Telegram/SourceFiles/history/view/history_view_list_widget.cpp
+@@ -3090,7 +3090,7 @@ void ListWidget::startItemRevealAnimations() {
+ 					0.,
+ 					1.,
+ 					reveal ? reveal->duration : st::itemRevealDuration,
+-					reveal ? anim::linear : anim::easeOutQuint);
++					reveal ? anim::linear : anim::macEaseOut);
+ 				if (view->data()->out()) {
+ 					_delegate->listChatTheme()->rotateComplexGradientBackground();
+ 				}
+@@ -3498,7 +3498,15 @@ void ListWidget::paintEvent(QPaintEvent *e) {
+ 			context.fullMessageSelected = selection.fullMessageSelected;
+ 			context.messageSelection = selection.messageSelection;
+ 			context.highlight = _highlighter.state(item);
++			// macOS: rows sliding in from below the reveal edge fade in.
++			const auto hidden = (_itemsRevealHeight > 0 && height > 0)
++				? (top - collapseShift + height - _itemsTop - _itemsHeight)
++				: 0;
++			if (hidden > 0) {
++				p.setOpacity(1. - std::min(hidden, height) / float64(height));
++			}
+ 			view->draw(p, context);
++			p.setOpacity(1.);
+ 		}
+ 		if (_translateTracker) {
+ 			_translateTracker->add(view);
 diff --git a/Telegram/SourceFiles/history/view/history_view_top_bar_widget.cpp b/Telegram/SourceFiles/history/view/history_view_top_bar_widget.cpp
 index 30024a8..9bf8c66 100644
 --- a/Telegram/SourceFiles/history/view/history_view_top_bar_widget.cpp
@@ -2041,10 +2156,10 @@ index 4d781ba..7232a6e 100644
  // The self-test's bare-toggle observation window, and the colour its
  // nondiscriminating probe always answers.
 diff --git a/Telegram/SourceFiles/ui/chat/chat.style b/Telegram/SourceFiles/ui/chat/chat.style
-index 4dc6e4b..47f9234 100644
+index 4dc6e4b..36405ec 100644
 --- a/Telegram/SourceFiles/ui/chat/chat.style
 +++ b/Telegram/SourceFiles/ui/chat/chat.style
-@@ -50,8 +50,9 @@ tagInfoAdminsOnlyLabel: FlatLabel(defaultFlatLabel) {
+@@ -50,12 +50,14 @@ tagInfoAdminsOnlyLabel: FlatLabel(defaultFlatLabel) {
  }
  
  msgMargin: margins(16px, 6px, 56px, 2px);
@@ -2056,7 +2171,13 @@ index 4dc6e4b..47f9234 100644
  msgSelectionOffset: 30px;
  msgSelectionBottomSkip: 5px;
  
-@@ -323,7 +324,7 @@ historyInfoToast: Toast(defaultToast) {
+-itemRevealDuration: 150;
++// macOS TableAnimationInterface: insert 0.2 s easeOut.
++itemRevealDuration: 200;
+ textRevealGradient: 24px;
+ middleClickAutoscrollSpeedScale: 30px;
+ middleClickAutoscrollMaxSpeed: 7200px;
+@@ -323,7 +325,7 @@ historyInfoToast: Toast(defaultToast) {
  }
  historyInfoToastIcon: icon {{ "toast/info", toastFg }};
  
@@ -2065,6 +2186,47 @@ index 4dc6e4b..47f9234 100644
  bubbleRadiusLarge: 16px;
  
  historyPhotoLeft: 14px;
+diff --git a/Telegram/SourceFiles/ui/effects/message_sending_text_flight.cpp b/Telegram/SourceFiles/ui/effects/message_sending_text_flight.cpp
+index c8f0cd8..8387fb3 100644
+--- a/Telegram/SourceFiles/ui/effects/message_sending_text_flight.cpp
++++ b/Telegram/SourceFiles/ui/effects/message_sending_text_flight.cpp
+@@ -36,9 +36,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
+ namespace Ui {
+ namespace {
+ 
+-constexpr auto kDuration = crl::time(280);
+-constexpr auto kSlideDuration = crl::time(160);
+-constexpr auto kFadeDuration = crl::time(110);
++// macOS ChatTextSendFlight: vertical spring m1 k272 c33 settles ~0.56 s,
++// horizontal 0.185 s easeInEaseOut, field snapshot fades in 0.1 s.
++constexpr auto kDuration = crl::time(560);
++constexpr auto kSlideDuration = crl::time(185);
++constexpr auto kFadeDuration = crl::time(100);
+ constexpr auto kGiveUpTimeout = crl::time(1000);
+ constexpr auto kMorphMaxFieldHeights = 1.5;
+ constexpr auto kMorphHiddenLines = 3;
+@@ -157,7 +159,11 @@ void ApplyTopFade(QImage &image, not_null<InputField*> field) {
+ }
+ 
+ [[nodiscard]] float64 RiseProgress(float64 progress) {
+-	return Premium::CubicBezier(0.25, 0.1, 0.25, 1., progress);
++	static const auto spring = anim::dampedSpring(
++		std::sqrt(272.),
++		33. / (2. * std::sqrt(272.)),
++		kDuration / 1000.);
++	return spring(1., progress);
+ }
+ 
+ [[nodiscard]] int RevealHeight(
+@@ -734,7 +740,7 @@ void MessageSendingTextFlight::refresh() {
+ 	}
+ 	const auto elapsed = _progress * kDuration;
+ 	const auto slide = std::min(elapsed / kSlideDuration, 1.);
+-	const auto x = 1. - anim::easeOutQuint(1., slide);
++	const auto x = 1. - anim::macEaseInOut(1., slide);
+ 	const auto y = 1. - RiseProgress(_progress);
+ 	_position = target + QPoint(
+ 		int(base::SafeRound(_residual->x() * x)),
 diff --git a/Telegram/SourceFiles/window/themes/window_themes_embedded.cpp b/Telegram/SourceFiles/window/themes/window_themes_embedded.cpp
 index 2be03d2..dcaa9e2 100644
 --- a/Telegram/SourceFiles/window/themes/window_themes_embedded.cpp

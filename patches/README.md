@@ -22,6 +22,8 @@ git -C refs/tdesktop/Telegram/lib_ui apply --binary ../../../../patches/lib_ui.p
 | `tdesktop.patch` | пузыри подряд: без тени (`msgShadow` 0), зазор 4px (`msgMarginTopAttached` 2, macOS `topInset`); бейдж вкладки «Чаты» на углу иконки, места на 5+ цифр |
 | `lib_ui.patch` | кривые macOS в `anim::`: `cubicBezier`, `macSpring` (0.23,1,0.32,1), `macEaseOut`, `macEaseInOut`, `dampedSpring`, `macMenuSpring` (ω20 ζ0.84, 0.408 s); меню (`PanelAnimation`) раскрывается пружиной от 0.42 размера, альфа = smoothstep(0, 0.35, openness), показ 408 мс, скрытие 200 мс |
 | `tdesktop.patch` | push/pop разделов (`Window::SlideAnimation`): `macSpring`, 400 мс, старый экран сдвигается на треть ширины |
+| `tdesktop.patch` | анимации B4/B1/J1: новое сообщение въезжает 200 мс `macEaseOut` (`itemRevealDuration`), строка проявляется по мере выезда из-под края (`HistoryInner`/`ListWidget::paintEvent`); «полёт» текста при отправке — 560 мс, вертикаль пружиной m1 k272 c33, горизонталь 185 мс `macEaseInOut`, fade 100 мс (`message_sending_text_flight.cpp`); кнопки «вниз»/упоминания — 200 мс `macEaseOut` (`CornerButtons`); кнопка эмодзи без своей подложки (`historyAttachEmoji.bg: transparent`) |
+| `lib_ui.patch` | B7 авто-рост поля ввода: `InputField::setHeightAnimationDuration` (по умолчанию выкл.), высота тянется 200 мс `macEaseOut`, включено в `HistoryWidget` и `ComposeControls` (кроме сторис); G1/G4 модалки (`LayerStackWidget::BackgroundWidget`): бокс alpha 0.1→1 за 250 мс и y +100→0 за 200 мс по `macSpring`, затемнение 150 мс при показе / 250 мс при скрытии |
 
 Цвета генерирует `tools/mac_palette.py` из `ColorPalette.swift` Telegram-macOS; после изменения сопоставления — перезапустить его и пересоздать патчи:
 

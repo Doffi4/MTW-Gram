@@ -17453,6 +17453,82 @@ index fd2a4d4..850fd1e 100644
  	}
  	const auto widthProgress = (_startWidth < 0 || dt >= _widthDuration)
  		? 1.
+diff --git a/ui/layers/layer_widget.cpp b/ui/layers/layer_widget.cpp
+index ec3171e..0379ad3 100644
+--- a/ui/layers/layer_widget.cpp
++++ b/ui/layers/layer_widget.cpp
+@@ -22,6 +22,16 @@
+ #include <QtGui/QtEvents>
+ 
+ namespace Ui {
++namespace {
++
++// macOS Modal (bottomToCenter): box alpha 0.1 -> 1 in 0.25 s, y +100 -> 0
++// in 0.2 s, both on the "spring" bezier; dimming 0.15 s in, 0.25 s out.
++constexpr auto kLayerDuration = crl::time(250);
++constexpr auto kLayerMoveDuration = crl::time(200);
++constexpr auto kLayerShift = 100;
++constexpr auto kDimShowDuration = crl::time(150);
++
++} // namespace
+ 
+ class LayerStackWidget::BackgroundWidget : public RpWidget {
+ public:
+@@ -59,7 +69,7 @@ private:
+ 	void setMainMenuShown(bool shown);
+ 	void setSpecialLayerShown(bool shown);
+ 	void setLayerShown(bool shown);
+-	void checkWasShown(bool wasShown);
++	void checkWasShown(bool wasShown, crl::time duration = 0);
+ 	void animationCallback();
+ 
+ 	QPixmap _bodyCache;
+@@ -206,18 +216,20 @@ void LayerStackWidget::BackgroundWidget::setLayerShown(bool shown) {
+ 			[this] { animationCallback(); },
+ 			_layerShown ? 0. : 1.,
+ 			_layerShown ? 1. : 0.,
+-			_duration);
++			kLayerDuration);
+ 	}
+-	checkWasShown(wasShown);
++	checkWasShown(wasShown, shown ? kDimShowDuration : kLayerDuration);
+ }
+ 
+-void LayerStackWidget::BackgroundWidget::checkWasShown(bool wasShown) {
++void LayerStackWidget::BackgroundWidget::checkWasShown(
++		bool wasShown,
++		crl::time duration) {
+ 	if (isShown() != wasShown) {
+ 		_a_shown.start(
+ 			[this] { animationCallback(); },
+ 			wasShown ? 1. : 0.,
+ 			wasShown ? 0. : 1.,
+-			_duration,
++			duration ? duration : _duration,
+ 			anim::easeOutCirc);
+ 	}
+ }
+@@ -258,6 +270,20 @@ void LayerStackWidget::BackgroundWidget::paintEvent(QPaintEvent *e) {
+ 	auto bgOpacity = _a_shown.value(isShown() ? 1. : 0.);
+ 	auto specialLayerOpacity = _a_specialLayerShown.value(_specialLayerShown ? 1. : 0.);
+ 	auto layerOpacity = _a_layerShown.value(_layerShown ? 1. : 0.);
++	if (_a_layerShown.animating()) {
++		if (_layerShown) {
++			const auto move = std::min(
++				layerOpacity * kLayerDuration / kLayerMoveDuration,
++				1.);
++			layerBox.translate(0, anim::interpolate(
++				style::ConvertScale(kLayerShift),
++				0,
++				anim::macSpring(1., move)));
++			layerOpacity = 0.1 + 0.9 * anim::macSpring(1., layerOpacity);
++		} else {
++			layerOpacity = 1. - anim::macSpring(1., 1. - layerOpacity);
++		}
++	}
+ 	if (bgOpacity == 0.) {
+ 		return;
+ 	}
 diff --git a/ui/style/style_core.cpp b/ui/style/style_core.cpp
 index e589944..5c937c7 100644
 --- a/ui/style/style_core.cpp
@@ -17497,6 +17573,69 @@ index a8d68ed..9407b87 100644
  
  	for (const auto &file : QDir(u":/gui/fonts/"_q).entryInfoList()) {
  		LoadCustomFont(Ui::Text::FontPath(file.canonicalFilePath()));
+diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
+index d57ac56..6399873 100644
+--- a/ui/widgets/fields/input_field.cpp
++++ b/ui/widgets/fields/input_field.cpp
+@@ -2850,6 +2850,24 @@ bool InputField::heightAutoupdated() {
+ 		+ _additionalMargins.top()
+ 		+ _additionalMargins.bottom();
+ 	const auto newHeight = std::clamp(contentHeight, _minHeight, _maxHeight);
++	if (_heightDuration
++		&& isVisible()
++		&& !anim::Disabled()
++		&& (height() != newHeight || _a_height.animating())) {
++		if (_heightTarget != newHeight) {
++			_heightTarget = newHeight;
++			_a_height.start([=](float64 value) {
++				const auto now = int(std::round(value));
++				if (height() != now) {
++					resize(width(), now);
++					_heightChanges.fire({});
++				}
++			}, height(), newHeight, _heightDuration, anim::macEaseOut);
++		}
++		return false;
++	}
++	_a_height.stop();
++	_heightTarget = -1;
+ 	if (height() != newHeight) {
+ 		resize(width(), newHeight);
+ 		return true;
+@@ -2857,6 +2875,10 @@ bool InputField::heightAutoupdated() {
+ 	return false;
+ }
+ 
++void InputField::setHeightAnimationDuration(crl::time duration) {
++	_heightDuration = duration;
++}
++
+ void InputField::checkContentHeight() {
+ 	if (heightAutoupdated()) {
+ 		_heightChanges.fire({});
+diff --git a/ui/widgets/fields/input_field.h b/ui/widgets/fields/input_field.h
+index abf6b4b..f1d3078 100644
+--- a/ui/widgets/fields/input_field.h
++++ b/ui/widgets/fields/input_field.h
+@@ -220,6 +220,8 @@ public:
+ 	void setMaxLength(int maxLength);
+ 	void setMinHeight(int minHeight);
+ 	void setMaxHeight(int maxHeight);
++	// Auto-height changes animate with this duration (0 = instant).
++	void setHeightAnimationDuration(crl::time duration);
+ 	void setMode(Mode mode);
+ 
+ 	[[nodiscard]] const TextWithTags &getTextWithTags() const {
+@@ -691,6 +693,9 @@ private:
+ 	bool _performingUndoRedo = false;
+ 	bool _insertedTagsDelayClear = false;
+ 	bool _inHeightCheck = false;
++	crl::time _heightDuration = 0;
++	int _heightTarget = -1;
++	Animations::Simple _a_height;
+ 
+ 	bool _customUpDown = false;
+ 
 diff --git a/ui/widgets/menu/menu_action.cpp b/ui/widgets/menu/menu_action.cpp
 index 4c16b67..068c37c 100644
 --- a/ui/widgets/menu/menu_action.cpp
