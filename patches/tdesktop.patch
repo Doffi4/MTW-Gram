@@ -1083,7 +1083,7 @@ index 716b24f..2cc1561 100644
  			Ui::NameTextOptions());
  	}
 diff --git a/Telegram/SourceFiles/dialogs/dialogs_widget.cpp b/Telegram/SourceFiles/dialogs/dialogs_widget.cpp
-index 4529103..556427e 100644
+index 4529103..3397e73 100644
 --- a/Telegram/SourceFiles/dialogs/dialogs_widget.cpp
 +++ b/Telegram/SourceFiles/dialogs/dialogs_widget.cpp
 @@ -53,6 +53,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
@@ -1124,7 +1124,7 @@ index 4529103..556427e 100644
  	setupShortcuts();
  	if (_stories) {
  		setupStories();
-@@ -1746,6 +1756,167 @@ void Widget::setupMainMenuToggle() {
+@@ -1746,6 +1756,168 @@ void Widget::setupMainMenuToggle() {
  	}, _mainMenu.toggle->lifetime());
  }
  
@@ -1270,11 +1270,12 @@ index 4529103..556427e 100644
 +				(width * (2 * i + 1)) / (2 * count) - button->width() / 2,
 +				(tabs->height() - button->height()) / 2);
 +		}
++		// Badge sits on the icon's top right corner, room for 4+ digits.
 +		const auto size = st::dialogsMacTabsHeight / 2;
 +		badge->setGeometry(
-+			chats->x() + chats->width() / 2 + 2 * st::dialogsFilterSkip,
-+			chats->y() + st::dialogsFilterSkip,
-+			size,
++			chats->x() + chats->width() / 2 + size / 6,
++			chats->y() + size / 6,
++			2 * size,
 +			size);
 +	}, tabs->lifetime());
 +}
@@ -1292,7 +1293,7 @@ index 4529103..556427e 100644
  void Widget::setupStories() {
  	_stories->verticalScrollEvents(
  	) | rpl::on_next([=](not_null<QWheelEvent*> e) {
-@@ -2044,13 +2215,17 @@ void Widget::updateLockUnlockPosition() {
+@@ -2044,13 +2216,17 @@ void Widget::updateLockUnlockPosition() {
  	const auto stories = (_stories && !_stories->isHidden())
  		? _stories->collapsedGeometryCurrent()
  		: Stories::List::CollapsedGeometry();
@@ -1312,7 +1313,7 @@ index 4529103..556427e 100644
  }
  
  void Widget::updateHasFocus(not_null<QWidget*> focused) {
-@@ -4662,16 +4837,29 @@ void Widget::updateControlsGeometry() {
+@@ -4662,16 +4838,29 @@ void Widget::updateControlsGeometry() {
  		? ((smallw - ratiow) / float64(smallw - _narrowWidth))
  		: 0.;
  
@@ -1349,7 +1350,7 @@ index 4529103..556427e 100644
  	_searchControls->setGeometry(0, filterAreaTop, ratiow, filterAreaHeight);
  	if (_subsectionTopBar) {
  		_subsectionTopBar->setGeometryWithNarrowRatio(
-@@ -4680,7 +4868,17 @@ void Widget::updateControlsGeometry() {
+@@ -4680,7 +4869,17 @@ void Widget::updateControlsGeometry() {
  			narrowRatio);
  	}
  
@@ -1368,7 +1369,7 @@ index 4529103..556427e 100644
  	filterLeft = anim::interpolate(filterLeft, _narrowWidth, narrowRatio);
  	_search->setGeometryToLeft(
  		filterLeft,
-@@ -4689,14 +4887,14 @@ void Widget::updateControlsGeometry() {
+@@ -4689,14 +4888,14 @@ void Widget::updateControlsGeometry() {
  		_search->height());
  
  	auto mainMenuLeft = anim::interpolate(
@@ -1385,7 +1386,7 @@ index 4529103..556427e 100644
  		_mainMenu.toggle->y()
  			+ _mainMenu.toggle->height()
  			+ st::dialogsFilterPadding.y());
-@@ -4729,9 +4927,14 @@ void Widget::updateControlsGeometry() {
+@@ -4729,9 +4928,14 @@ void Widget::updateControlsGeometry() {
  					- st::dialogsStories.photoLeft),
  				_narrowWidth,
  				narrowRatio)
@@ -1401,7 +1402,7 @@ index 4529103..556427e 100644
  			inFolderTitle ? style::al_left : style::al_right,
  			{ 0, expandedStoriesTop, barw, st::dialogsStoriesFull.height });
  	}
-@@ -4746,6 +4949,9 @@ void Widget::updateControlsGeometry() {
+@@ -4746,6 +4950,9 @@ void Widget::updateControlsGeometry() {
  	updateLockUnlockPosition();
  
  	auto bottomSkip = 0;
@@ -1411,7 +1412,7 @@ index 4529103..556427e 100644
  	const auto putBottomButton = [&](auto &button) {
  		if (button && !button->isHidden()) {
  			const auto buttonHeight = button->height();
-@@ -4757,6 +4963,7 @@ void Widget::updateControlsGeometry() {
+@@ -4757,6 +4964,7 @@ void Widget::updateControlsGeometry() {
  				buttonHeight);
  		}
  	};
@@ -1419,7 +1420,7 @@ index 4529103..556427e 100644
  	putBottomButton(_updateTelegram);
  	putBottomButton(_downloadBar);
  	putBottomButton(_loadMoreChats);
-@@ -4821,7 +5028,7 @@ void Widget::updateControlsGeometry() {
+@@ -4821,7 +5029,7 @@ void Widget::updateControlsGeometry() {
  		if (_chatFilters) {
  			_chatFilters->move(0, chatFiltersTop);
  		}
@@ -1428,7 +1429,7 @@ index 4529103..556427e 100644
  			+ ((_chatFilters
  				&& _searchState.query.isEmpty()
  				&& !_openedForum
-@@ -4829,6 +5036,21 @@ void Widget::updateControlsGeometry() {
+@@ -4829,6 +5037,21 @@ void Widget::updateControlsGeometry() {
  				&& !searchInPeer())
  				? (_chatFilters->height() * (1. - narrowRatio))
  				: 0);
@@ -2040,10 +2041,22 @@ index 4d781ba..7232a6e 100644
  // The self-test's bare-toggle observation window, and the colour its
  // nondiscriminating probe always answers.
 diff --git a/Telegram/SourceFiles/ui/chat/chat.style b/Telegram/SourceFiles/ui/chat/chat.style
-index 4dc6e4b..f48a2f1 100644
+index 4dc6e4b..47f9234 100644
 --- a/Telegram/SourceFiles/ui/chat/chat.style
 +++ b/Telegram/SourceFiles/ui/chat/chat.style
-@@ -323,7 +323,7 @@ historyInfoToast: Toast(defaultToast) {
+@@ -50,8 +50,9 @@ tagInfoAdminsOnlyLabel: FlatLabel(defaultFlatLabel) {
+ }
+ 
+ msgMargin: margins(16px, 6px, 56px, 2px);
+-msgMarginTopAttached: 0px;
+-msgShadow: 2px;
++// macOS: no bubble shadow, grouped bubbles keep a 4px gap (topInset 2).
++msgMarginTopAttached: 2px;
++msgShadow: 0px;
+ msgSelectionOffset: 30px;
+ msgSelectionBottomSkip: 5px;
+ 
+@@ -323,7 +324,7 @@ historyInfoToast: Toast(defaultToast) {
  }
  historyInfoToastIcon: icon {{ "toast/info", toastFg }};
  
@@ -2198,3 +2211,54 @@ index 2be03d2..dcaa9e2 100644
  		};
  	}
  	Unexpected("Type in Window::Theme::AccentColors.");
+diff --git a/Telegram/SourceFiles/window/window_slide_animation.cpp b/Telegram/SourceFiles/window/window_slide_animation.cpp
+index cbe2c30..1e4bfeb 100644
+--- a/Telegram/SourceFiles/window/window_slide_animation.cpp
++++ b/Telegram/SourceFiles/window/window_slide_animation.cpp
+@@ -10,6 +10,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
+ 
+ 
+ namespace Window {
++namespace {
++
++// macOS ViewController push/pop: 0.4 s "spring" (ViewController.swift:531).
++constexpr auto kMacPushDuration = crl::time(400);
++
++} // namespace
+ 
+ void SlideAnimation::paintContents(QPainter &p) const {
+ 	const auto retina = style::DevicePixelRatio();
+@@ -112,9 +118,10 @@ void SlideAnimation::paintContents(QPainter &p) const {
+ 			_cacheOver,
+ 			QRect(QPoint(), _cacheOver.size()));
+ 	} else {
++		// macOS parallax: the old screen moves by a third of the width.
+ 		const auto coordUnder = anim::interpolate(
+ 			0,
+-			-st::slideShift,
++			-_cacheUnder.width() / retina / 3,
+ 			progress);
+ 		const auto coordOver = anim::interpolate(
+ 			_cacheOver.width() / retina,
+@@ -202,7 +209,7 @@ void SlideAnimation::start() {
+ 	const auto curve = fromBottom ? anim::easeOutQuint : transition();
+ 	const auto duration = fromBottom
+ 		? (st::slideDuration * 2)
+-		: st::slideDuration;
++		: kMacPushDuration;
+ 	_animation.start(
+ 		[this] { animationCallback(); },
+ 		fromLeft ? 1. : 0.,
+diff --git a/Telegram/SourceFiles/window/window_slide_animation.h b/Telegram/SourceFiles/window/window_slide_animation.h
+index 8931aa4..da93fa8 100644
+--- a/Telegram/SourceFiles/window/window_slide_animation.h
++++ b/Telegram/SourceFiles/window/window_slide_animation.h
+@@ -41,7 +41,7 @@ public:
+ 	void start();
+ 
+ 	static const anim::transition &transition() {
+-		return anim::easeOutCirc;
++		return anim::macSpring;
+ 	}
+ 
+ private:

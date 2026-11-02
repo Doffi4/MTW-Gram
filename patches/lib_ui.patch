@@ -17334,6 +17334,125 @@ index e2ba0d6..9b67241 100644
  sideBarBadgeBgMutedActive: sideBarBadgeBg; // filters side bar unimportant badge background when folder is open
  sideBarBadgeFg: #ffffff; // filters side bar badge text
  
+diff --git a/ui/effects/animation_value.cpp b/ui/effects/animation_value.cpp
+index c83c418..21f7d3d 100644
+--- a/ui/effects/animation_value.cpp
++++ b/ui/effects/animation_value.cpp
+@@ -128,6 +128,59 @@ transition easeOutQuint = [](const float64 &delta, const float64 &dt) {
+ 	return result;
+ };
+ 
++transition cubicBezier(float64 x1, float64 y1, float64 x2, float64 y2) {
++	Expects(x1 >= 0. && x1 <= 1. && x2 >= 0. && x2 <= 1.);
++
++	const auto coord = [](float64 t, float64 p1, float64 p2) {
++		const auto u = 1. - t;
++		return 3. * u * u * t * p1 + 3. * u * t * t * p2 + t * t * t;
++	};
++	return [=](const float64 &delta, const float64 &dt) {
++		if (dt <= 0.) {
++			return 0.;
++		} else if (dt >= 1.) {
++			return delta;
++		}
++		// x(t) is monotonic for x1, x2 in [0, 1], so bisection converges.
++		auto from = 0.;
++		auto till = 1.;
++		auto t = dt;
++		for (auto i = 0; i != 30; ++i) {
++			const auto x = coord(t, x1, x2);
++			if (std::abs(x - dt) < 1e-6) {
++				break;
++			}
++			((x < dt) ? from : till) = t;
++			t = (from + till) / 2.;
++		}
++		return delta * coord(t, y1, y2);
++	};
++}
++
++transition macSpring = cubicBezier(0.23, 1., 0.32, 1.);
++transition macEaseOut = cubicBezier(0., 0., 0.58, 1.);
++transition macEaseInOut = cubicBezier(0.42, 0., 0.58, 1.);
++
++transition dampedSpring(float64 omega, float64 zeta, float64 seconds) {
++	Expects(omega > 0. && zeta > 0. && seconds > 0.);
++
++	return [=](const float64 &delta, const float64 &dt) {
++		if (dt >= 1.) {
++			return delta;
++		}
++		const auto t = std::max(dt, 0.) * seconds;
++		const auto decay = std::exp(-zeta * omega * t);
++		if (zeta >= 1.) {
++			return delta * (1. - (1. + omega * t) * decay);
++		}
++		const auto damped = omega * std::sqrt(1. - zeta * zeta);
++		return delta * (1. - decay * (std::cos(damped * t)
++			+ (zeta * omega / damped) * std::sin(damped * t)));
++	};
++}
++
++transition macMenuSpring = dampedSpring(20., 0.84, 0.408);
++
+ rpl::producer<bool> Disables() {
+ 	return AnimationsDisabled.value();
+ };
+diff --git a/ui/effects/animation_value.h b/ui/effects/animation_value.h
+index 593432e..ae0eefa 100644
+--- a/ui/effects/animation_value.h
++++ b/ui/effects/animation_value.h
+@@ -42,6 +42,27 @@ extern transition easeOutCubic;
+ extern transition easeInQuint;
+ extern transition easeOutQuint;
+ 
++// CSS-style cubic-bezier(x1, y1, x2, y2), x1 and x2 in [0, 1].
++[[nodiscard]] transition cubicBezier(
++	float64 x1,
++	float64 y1,
++	float64 x2,
++	float64 y2);
++
++// Telegram for macOS curves (TGUIKit CAAnimationUtils / ContainableController).
++extern transition macSpring; // bezier(0.23, 1, 0.32, 1), "spring" in code.
++extern transition macEaseOut; // bezier(0, 0, 0.58, 1).
++extern transition macEaseInOut; // bezier(0.42, 0, 0.58, 1).
++
++// Damped spring x(t), t = dt * seconds, may overshoot 1 when zeta < 1.
++[[nodiscard]] transition dampedSpring(
++	float64 omega,
++	float64 zeta,
++	float64 seconds);
++
++// macOS AppMenu open spring: omega 20, zeta 0.84, settles in 0.408 s.
++extern transition macMenuSpring;
++
+ inline transition bumpy(float64 bump) {
+ 	auto dt0 = (bump - sqrt(bump * (bump - 1.)));
+ 	auto k = (1 / (2 * dt0 - 1));
+diff --git a/ui/effects/panel_animation.cpp b/ui/effects/panel_animation.cpp
+index fd2a4d4..850fd1e 100644
+--- a/ui/effects/panel_animation.cpp
++++ b/ui/effects/panel_animation.cpp
+@@ -324,9 +324,15 @@ void PanelAnimation::start() {
+ 
+ auto PanelAnimation::computeState(float64 dt, float64 opacity) const
+ -> PaintState {
+-	auto &transition = anim::easeOutCirc;
+-	if (dt < _alphaDuration) {
+-		opacity *= transition(1., dt / _alphaDuration);
++	// macOS AppMenu: spring openness, the frame can't outgrow the cache.
++	const auto transition = [](float64 delta, float64 dt) {
++		return std::min(anim::macMenuSpring(delta, dt), delta);
++	};
++	// Alpha is smoothstep(0, opacityDuration, openness), as in AppMenu.
++	const auto openness = transition(1., dt);
++	if (openness < _alphaDuration) {
++		const auto x = openness / _alphaDuration;
++		opacity *= x * x * (3. - 2. * x);
+ 	}
+ 	const auto widthProgress = (_startWidth < 0 || dt >= _widthDuration)
+ 		? 1.
 diff --git a/ui/style/style_core.cpp b/ui/style/style_core.cpp
 index e589944..5c937c7 100644
 --- a/ui/style/style_core.cpp
@@ -17435,7 +17554,7 @@ index 2a2e689..b051a05 100644
  
  private:
 diff --git a/ui/widgets/widgets.style b/ui/widgets/widgets.style
-index 8b8df7d..c84e81a 100644
+index 8b8df7d..627b652 100644
 --- a/ui/widgets/widgets.style
 +++ b/ui/widgets/widgets.style
 @@ -264,6 +264,9 @@ Menu {
@@ -17448,6 +17567,24 @@ index 8b8df7d..c84e81a 100644
  }
  
  PopupMenu {
+@@ -929,12 +932,12 @@ roundShadowRadius8px: Shadow {
+ }
+ 
+ defaultPanelAnimation: PanelAnimation {
+-	startWidth: 0.5;
+-	widthDuration: 0.6;
+-	startHeight: 0.3;
+-	heightDuration: 0.9;
++	startWidth: 0.42;
++	widthDuration: 1.;
++	startHeight: 0.42;
++	heightDuration: 1.;
+ 	startOpacity: 0.2;
+-	opacityDuration: 0.3;
++	opacityDuration: 0.35;
+ 	startFadeTop: 0.;
+ 	fadeHeight: 0.2;
+ 	fadeOpacity: 1.0;
 @@ -966,7 +969,7 @@ defaultMenu: Menu {
  	itemFgShortcutOver: windowSubTextFgOver;
  	itemFgShortcutDisabled: menuFgDisabled;
@@ -17467,15 +17604,19 @@ index 8b8df7d..c84e81a 100644
  }
  defaultPopupMenu: PopupMenu {
  	shadow: defaultBoxShadow;
-@@ -992,7 +998,7 @@ defaultPopupMenu: PopupMenu {
+@@ -992,9 +998,9 @@ defaultPopupMenu: PopupMenu {
  
  	menu: defaultMenu;
  
 -	radius: 8px;
+-	duration: 150;
+-	showDuration: 200;
 +	radius: 18px;
- 	duration: 150;
- 	showDuration: 200;
++	duration: 200;
++	showDuration: 408;
  }
+ 
+ defaultPillTabs: PillTabs {
 @@ -1693,8 +1699,8 @@ menuIconAttentionColor: attentionButtonFg;
  menuIconSubmenuArrow: defaultMenuArrow;
  
