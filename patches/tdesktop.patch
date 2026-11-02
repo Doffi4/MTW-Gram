@@ -861,7 +861,7 @@ index 6291aef..6ede1ee 100644
  	field: historyComposeField;
  	send: historySend;
 diff --git a/Telegram/SourceFiles/dialogs/dialogs.style b/Telegram/SourceFiles/dialogs/dialogs.style
-index 922cac2..fe22f55 100644
+index 922cac2..f779b87 100644
 --- a/Telegram/SourceFiles/dialogs/dialogs.style
 +++ b/Telegram/SourceFiles/dialogs/dialogs.style
 @@ -75,7 +75,7 @@ infoForumTopicIcon: ForumTopicIcon {
@@ -941,7 +941,7 @@ index 922cac2..fe22f55 100644
  }
  dialogsCancelSearchInPeer: IconButton(dialogsMenuToggle) {
  	icon: icon {{ "dialogs/dialogs_cancel_search", dialogsMenuIconFg }};
-@@ -968,3 +975,33 @@ restoreWindowsOfferClose: IconButton(dialogsCancelSearchInPeer) {
+@@ -968,3 +975,36 @@ restoreWindowsOfferClose: IconButton(dialogsCancelSearchInPeer) {
  	rippleAreaPosition: point(0px, 1px);
  	rippleAreaSize: 28px;
  }
@@ -975,6 +975,9 @@ index 922cac2..fe22f55 100644
 +dialogsMacTabCalls: icon {{ "menu/phone", dialogsMenuIconFg }};
 +dialogsMacTabChats: icon {{ "menu/chats", windowActiveTextFg }};
 +dialogsMacTabSettings: icon {{ "menu/settings", dialogsMenuIconFg }};
++// Floating chat list panel (ApplicationContext leftController.insets).
++dialogsMacPanelInset: 8px;
++dialogsMacPanelRadius: 12px;
 diff --git a/Telegram/SourceFiles/dialogs/dialogs_entry.cpp b/Telegram/SourceFiles/dialogs/dialogs_entry.cpp
 index 2fe437a..9e7123b 100644
 --- a/Telegram/SourceFiles/dialogs/dialogs_entry.cpp
@@ -1846,6 +1849,127 @@ index aa58185..15bd172 100644
  topBarNameRightPadding: 3px;
  topBarClearButton: RoundButton(defaultLightButton) {
  	width: -18px;
+diff --git a/Telegram/SourceFiles/mainwidget.cpp b/Telegram/SourceFiles/mainwidget.cpp
+index ec9a349..072e0b8 100644
+--- a/Telegram/SourceFiles/mainwidget.cpp
++++ b/Telegram/SourceFiles/mainwidget.cpp
+@@ -97,6 +97,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
+ #include "main/main_app_config.h"
+ #include "settings/sections/settings_premium.h"
+ #include "storage/storage_user_photos.h"
++#include "ui/painter.h"
+ #include "styles/style_dialogs.h"
+ #include "styles/style_chat.h"
+ #include "styles/style_window.h"
+@@ -2441,6 +2442,9 @@ void MainWidget::orderWidgets() {
+ 	if (_callTopBar) {
+ 		_callTopBar->raise();
+ 	}
++	if (_dialogsPanel) {
++		_dialogsPanel->raise();
++	}
+ 	if (_sideShadow) {
+ 		_sideShadow->raise();
+ 	}
+@@ -2570,6 +2574,9 @@ void MainWidget::paintEvent(QPaintEvent *e) {
+ 	if (_showAnimation) {
+ 		auto p = QPainter(this);
+ 		_showAnimation->paintContents(p);
++	} else if (_dialogs && !isOneColumn()) {
++		// Margins around the floating chat list.
++		QPainter(this).fillRect(0, 0, _history->x(), height(), st::windowBg);
+ 	}
+ }
+ 
+@@ -2768,6 +2775,9 @@ void MainWidget::updateControlsGeometry() {
+ 			mainSectionGeometry,
+ 			_contentScrollAddToY);
+ 		if (_hider) _hider->setGeometry(0, 0, dialogsWidth, height());
++		if (_dialogsPanel) {
++			_dialogsPanel->hide();
++		}
+ 	} else {
+ 		auto thirdSectionWidth = _thirdSection ? _thirdColumnWidth : 0;
+ 		if (_thirdSection) {
+@@ -2784,13 +2794,21 @@ void MainWidget::updateControlsGeometry() {
+ 			accumulate_min(
+ 				dialogsWidth,
+ 				width() - st::columnMinimalWidthMain);
+-			_dialogs->setGeometryToLeft(0, 0, dialogsWidth, height());
++			// macOS: the chat list floats with insets 8/8/8/0.
++			const auto inset = st::dialogsMacPanelInset;
++			_dialogs->setGeometryToLeft(
++				inset,
++				inset,
++				dialogsWidth - inset,
++				height() - 2 * inset);
++			updateDialogsPanel();
+ 		}
+ 		if (_sideShadow) {
++			// The floating panel draws its own border.
+ 			_sideShadow->setGeometryToLeft(
+ 				dialogsWidth,
+ 				shadowTop,
+-				st::lineWidth,
++				0,
+ 				shadowHeight);
+ 		}
+ 		if (_thirdShadow) {
+@@ -2860,6 +2878,33 @@ void MainWidget::destroyThirdSection() {
+ 	_thirdSection.destroy();
+ }
+ 
++void MainWidget::updateDialogsPanel() {
++	if (!_dialogsPanel) {
++		_dialogsPanel = base::make_unique_q<Ui::RpWidget>(this);
++		const auto panel = _dialogsPanel.get();
++		panel->setAttribute(Qt::WA_TransparentForMouseEvents);
++		panel->paintRequest() | rpl::on_next([=] {
++			auto p = QPainter(panel);
++			auto hq = PainterHighQualityEnabler(p);
++			const auto r = st::dialogsMacPanelRadius;
++			const auto half = st::lineWidth / 2.;
++			const auto inner = QRectF(panel->rect()).marginsRemoved(
++				{ half, half, half, half });
++			auto outside = QPainterPath();
++			outside.addRect(panel->rect());
++			auto rounded = QPainterPath();
++			rounded.addRoundedRect(inner, r, r);
++			p.fillPath(outside.subtracted(rounded), st::windowBg);
++			p.setPen(QPen(st::windowBgRipple, st::lineWidth));
++			p.setBrush(Qt::NoBrush);
++			p.drawPath(rounded);
++		}, panel->lifetime());
++		orderWidgets();
++	}
++	_dialogsPanel->setGeometry(_dialogs->geometry());
++	_dialogsPanel->setVisible(!isOneColumn());
++}
++
+ void MainWidget::refreshResizeAreas() {
+ 	if (!isOneColumn() && _dialogs) {
+ 		ensureFirstColumnResizeAreaCreated();
+diff --git a/Telegram/SourceFiles/mainwidget.h b/Telegram/SourceFiles/mainwidget.h
+index 3e9ac4a..2883658 100644
+--- a/Telegram/SourceFiles/mainwidget.h
++++ b/Telegram/SourceFiles/mainwidget.h
+@@ -315,6 +315,7 @@ private:
+ 		not_null<const HistoryItem*> item) override;
+ 
+ 	void refreshResizeAreas();
++	void updateDialogsPanel();
+ 	template <typename MoveCallback, typename FinishCallback>
+ 	void createResizeArea(
+ 		object_ptr<Ui::ResizeArea> &area,
+@@ -356,6 +357,8 @@ private:
+ 	std::unique_ptr<Window::ConnectionState> _connecting;
+ 
+ 	const base::unique_qptr<Ui::PlainShadow> _sideShadow;
++	// macOS look: rounded corners and border over the floating chat list.
++	base::unique_qptr<Ui::RpWidget> _dialogsPanel;
+ 	object_ptr<Ui::PlainShadow> _thirdShadow = { nullptr };
+ 	object_ptr<Ui::ResizeArea> _firstColumnResizeArea = { nullptr };
+ 	object_ptr<Ui::ResizeArea> _thirdColumnResizeArea = { nullptr };
 diff --git a/Telegram/SourceFiles/media/view/media_view.style b/Telegram/SourceFiles/media/view/media_view.style
 index 9586275..7f30021 100644
 --- a/Telegram/SourceFiles/media/view/media_view.style
