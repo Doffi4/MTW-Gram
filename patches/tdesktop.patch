@@ -869,8 +869,34 @@ index 6291aef..0106c35 100644
  
  	field: historyComposeField;
  	send: historySend;
+diff --git a/Telegram/SourceFiles/core/core_settings.cpp b/Telegram/SourceFiles/core/core_settings.cpp
+index 698a01b..5f3de22 100644
+--- a/Telegram/SourceFiles/core/core_settings.cpp
++++ b/Telegram/SourceFiles/core/core_settings.cpp
+@@ -1950,7 +1950,7 @@ void Settings::resetOnLastLogout() {
+ 	_ivZoom = 0;
+ 	_recordVideoMessages = false;
+ 	_videoQuality = {};
+-	_chatFiltersHorizontal = false;
++	_chatFiltersHorizontal = true;
+ 	_chatFiltersTabsMode = Ui::ChatsFiltersTabsMode::Default;
+ 	_pullToNextChannel = true;
+ 	_quickDialogAction = Dialogs::Ui::QuickDialogAction::Disabled;
+diff --git a/Telegram/SourceFiles/core/core_settings.h b/Telegram/SourceFiles/core/core_settings.h
+index 98721e8..8f6e3fd 100644
+--- a/Telegram/SourceFiles/core/core_settings.h
++++ b/Telegram/SourceFiles/core/core_settings.h
+@@ -1199,7 +1199,7 @@ private:
+ 	QByteArray _tonsiteStorageToken;
+ 	rpl::variable<int> _ivZoom = 0;
+ 	Media::VideoQuality _videoQuality;
+-	rpl::variable<bool> _chatFiltersHorizontal = false;
++	rpl::variable<bool> _chatFiltersHorizontal = true;
+ 	rpl::variable<Ui::ChatsFiltersTabsMode> _chatFiltersTabsMode
+ 		= Ui::ChatsFiltersTabsMode::Default;
+ 	base::flat_map<QByteArray, QByteArray> _prefs;
 diff --git a/Telegram/SourceFiles/dialogs/dialogs.style b/Telegram/SourceFiles/dialogs/dialogs.style
-index 922cac2..c2399e0 100644
+index 922cac2..da8b56a 100644
 --- a/Telegram/SourceFiles/dialogs/dialogs.style
 +++ b/Telegram/SourceFiles/dialogs/dialogs.style
 @@ -75,7 +75,7 @@ infoForumTopicIcon: ForumTopicIcon {
@@ -950,7 +976,27 @@ index 922cac2..c2399e0 100644
  }
  dialogsCancelSearchInPeer: IconButton(dialogsMenuToggle) {
  	icon: icon {{ "dialogs/dialogs_cancel_search", dialogsMenuIconFg }};
-@@ -968,3 +975,37 @@ restoreWindowsOfferClose: IconButton(dialogsCancelSearchInPeer) {
+@@ -781,8 +788,19 @@ dialogsSearchTabs: SettingsSlider(defaultSettingsSlider) {
+ 	ripple: defaultRippleAnimation;
+ }
+ 
++// macOS ChatListRevealItem: row 30, item insets 10, regular 13, active label
++// in text color, 6px accent selector half hidden below the row.
+ chatsFiltersTabs: SettingsSlider(dialogsSearchTabs) {
++	padding: 10px;
++	height: 30px;
++	barTop: 27px;
++	strictSkip: 20px;
++	labelTop: 5px;
++	labelStyle: defaultTextStyle;
++	labelFgActive: windowFg;
++	barFgActive: windowActiveTextFg;
+ 	rippleBottomSkip: 0px;
++	duration: 200;
+ }
+ dialogsFiltersTabsIconSkip: 5px;
+ 
+@@ -968,3 +986,37 @@ restoreWindowsOfferClose: IconButton(dialogsCancelSearchInPeer) {
  	rippleAreaPosition: point(0px, 1px);
  	rippleAreaSize: 28px;
  }
