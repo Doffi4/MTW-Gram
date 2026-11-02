@@ -825,7 +825,7 @@ zv;vP%$ZJ+7@=x)98&Fk%g!%&ge@K%5Z2Mo5<bR|-@ZaeFi!1rh693NspXL9Z|9_-D
 cu!;iW|M4|c6=321y$|(|cKzdJDgQnF7tA&yiU0rr
 
 diff --git a/Telegram/SourceFiles/chat_helpers/chat_helpers.style b/Telegram/SourceFiles/chat_helpers/chat_helpers.style
-index 6291aef..6ede1ee 100644
+index 6291aef..d83a783 100644
 --- a/Telegram/SourceFiles/chat_helpers/chat_helpers.style
 +++ b/Telegram/SourceFiles/chat_helpers/chat_helpers.style
 @@ -258,6 +258,8 @@ ComposeControls {
@@ -833,7 +833,7 @@ index 6291aef..6ede1ee 100644
  	radius: pixels;
  	padding: margins;
 +	bgMargins: margins;
-+	bgBorder: color;
++	bgBorder: bool;
  
  	field: InputField;
  	fieldLeft: pixels;
@@ -856,12 +856,12 @@ index 6291aef..6ede1ee 100644
 +	radius: historyComposeCapsuleRadius;
 +	padding: margins(10px, historySendPadding, 10px, historySendPadding);
 +	bgMargins: margins(historyComposeCapsuleMargin, 4px, historyComposeCapsuleMargin, 4px);
-+	bgBorder: inputBorderFg;
++	bgBorder: true;
  
  	field: historyComposeField;
  	send: historySend;
 diff --git a/Telegram/SourceFiles/dialogs/dialogs.style b/Telegram/SourceFiles/dialogs/dialogs.style
-index 922cac2..f779b87 100644
+index 922cac2..c2399e0 100644
 --- a/Telegram/SourceFiles/dialogs/dialogs.style
 +++ b/Telegram/SourceFiles/dialogs/dialogs.style
 @@ -75,7 +75,7 @@ infoForumTopicIcon: ForumTopicIcon {
@@ -928,7 +928,7 @@ index 922cac2..f779b87 100644
  	textBg: filterInputInactiveBg;
  	textBgActive: filterInputActiveBg;
 -	textMargins: margins(12px, 8px, 30px, 5px);
-+	textMargins: margins(12px, 7px, 30px, 4px);
++	textMargins: margins(32px, 7px, 30px, 4px);
  
  	placeholderFg: placeholderFg;
  	placeholderFgActive: placeholderFgActive;
@@ -941,7 +941,7 @@ index 922cac2..f779b87 100644
  }
  dialogsCancelSearchInPeer: IconButton(dialogsMenuToggle) {
  	icon: icon {{ "dialogs/dialogs_cancel_search", dialogsMenuIconFg }};
-@@ -968,3 +975,36 @@ restoreWindowsOfferClose: IconButton(dialogsCancelSearchInPeer) {
+@@ -968,3 +975,37 @@ restoreWindowsOfferClose: IconButton(dialogsCancelSearchInPeer) {
  	rippleAreaPosition: point(0px, 1px);
  	rippleAreaSize: 28px;
  }
@@ -964,6 +964,7 @@ index 922cac2..f779b87 100644
 +dialogsMacArchiveHeight: 32px;
 +dialogsMacArchiveSkip: 6px;
 +dialogsMacArchiveRadius: 10px;
++dialogsMacSearchIcon: icon {{ "menu/search", placeholderFg }};
 +dialogsMacArchiveIcon: icon {{ "menu/archive", windowSubTextFg }};
 +dialogsMacTabsHeight: 48px;
 +dialogsMacTab: IconButton(dialogsMenuToggle) {
@@ -992,20 +993,34 @@ index 2fe437a..9e7123b 100644
  			Ui::NameTextOptions());
  	}
 diff --git a/Telegram/SourceFiles/dialogs/dialogs_inner_widget.cpp b/Telegram/SourceFiles/dialogs/dialogs_inner_widget.cpp
-index 935f0eb..5f0190e 100644
+index 935f0eb..bb18a80 100644
 --- a/Telegram/SourceFiles/dialogs/dialogs_inner_widget.cpp
 +++ b/Telegram/SourceFiles/dialogs/dialogs_inner_widget.cpp
-@@ -686,7 +686,8 @@ void InnerWidget::refreshWithCollapsedRows(bool toTop) {
+@@ -654,7 +654,11 @@ void InnerWidget::setNarrowRatio(float64 narrowRatio) {
+ 		return;
+ 	}
+ 	_geometryInited = true;
++	const auto wasNarrow = (_narrowRatio > 0.);
+ 	_narrowRatio = narrowRatio;
++	if (wasNarrow != (_narrowRatio > 0.) && needCollapsedRowsRefresh()) {
++		refreshWithCollapsedRows();
++	}
+ 	auto changed = _shownList->updateHeights(_narrowRatio);
+ 	if (communityModeShown()) {
+ 		const auto recount = [&](CommunityRowsView &view) {
+@@ -686,7 +690,10 @@ void InnerWidget::refreshWithCollapsedRows(bool toTop) {
  	const auto archive = !_shownList->empty()
  		? _shownList->begin()->get()->folder()
  		: nullptr;
 -	const auto inMainMenu = session().settings().archiveInMainMenu();
-+	// macOS look: archive is a capsule above the list (Dialogs::Widget).
-+	const auto inMainMenu = true;
++	// macOS look: archive is a capsule above the list (Dialogs::Widget),
++	// the narrow (userpics only) column has no capsule, keep the row there.
++	const auto inMainMenu = !_narrowRatio
++		|| session().settings().archiveInMainMenu();
  	if (archive && (session().settings().archiveCollapsed() || inMainMenu)) {
  		if (_selected && _selected->folder() == archive) {
  			_selected = nullptr;
-@@ -1913,16 +1914,20 @@ void InnerWidget::paintPeerSearchResult(
+@@ -1913,16 +1920,20 @@ void InnerWidget::paintPeerSearchResult(
  		not_null<const PeerSearchResult*> result,
  		const Ui::PaintContext &context) {
  	QRect fullRect(0, 0, context.width, st::dialogsRowHeight);
@@ -1031,7 +1046,7 @@ index 935f0eb..5f0190e 100644
  
  	auto peer = result->peer;
  	auto userpicPeer = (peer->migrateTo() ? peer->migrateTo() : peer);
-@@ -1940,11 +1945,11 @@ void InnerWidget::paintPeerSearchResult(
+@@ -1940,11 +1951,11 @@ void InnerWidget::paintPeerSearchResult(
  	if (const auto used = Ui::PaintRightButton(p, context)) {
  		namewidth -= used - st::dialogsUnreadPadding;
  	}
@@ -1045,13 +1060,12 @@ index 935f0eb..5f0190e 100644
  			peer->name(),
  			Ui::NameTextOptions());
  	}
-@@ -5010,8 +5015,7 @@ bool InnerWidget::needCollapsedRowsRefresh() const {
- 		&& (_collapsedRows.back()->folder != nullptr);
+@@ -5011,7 +5022,7 @@ bool InnerWidget::needCollapsedRowsRefresh() const {
  	const auto archiveIsCollapsed = (archive != nullptr)
  		&& session().settings().archiveCollapsed();
--	const auto archiveIsInMainMenu = (archive != nullptr)
+ 	const auto archiveIsInMainMenu = (archive != nullptr)
 -		&& session().settings().archiveInMainMenu();
-+	const auto archiveIsInMainMenu = (archive != nullptr);
++		&& (!_narrowRatio || session().settings().archiveInMainMenu());
  	return archiveIsInMainMenu
  		? (collapsedHasArchive || !_skipTopDialog)
  		: archiveIsCollapsed
@@ -1069,7 +1083,7 @@ index 716b24f..2cc1561 100644
  			Ui::NameTextOptions());
  	}
 diff --git a/Telegram/SourceFiles/dialogs/dialogs_widget.cpp b/Telegram/SourceFiles/dialogs/dialogs_widget.cpp
-index 4529103..247142a 100644
+index 4529103..556427e 100644
 --- a/Telegram/SourceFiles/dialogs/dialogs_widget.cpp
 +++ b/Telegram/SourceFiles/dialogs/dialogs_widget.cpp
 @@ -53,6 +53,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
@@ -1110,12 +1124,25 @@ index 4529103..247142a 100644
  	setupShortcuts();
  	if (_stories) {
  		setupStories();
-@@ -1746,6 +1756,154 @@ void Widget::setupMainMenuToggle() {
+@@ -1746,6 +1756,167 @@ void Widget::setupMainMenuToggle() {
  	}, _mainMenu.toggle->lifetime());
  }
  
 +void Widget::setupMacColumn() {
 +	_macTitle->setAttribute(Qt::WA_TransparentForMouseEvents);
++
++	const auto searchIcon = Ui::CreateChild<Ui::RpWidget>(_search.data());
++	searchIcon->setAttribute(Qt::WA_TransparentForMouseEvents);
++	searchIcon->resize(
++		st::dialogsFilter.textMargins.left(),
++		st::dialogsFilter.heightMin);
++	searchIcon->paintRequest() | rpl::on_next([=] {
++		auto p = QPainter(searchIcon);
++		st::dialogsMacSearchIcon.paintInCenter(p, searchIcon->rect());
++	}, searchIcon->lifetime());
++	_search->heightValue() | rpl::on_next([=](int height) {
++		searchIcon->move(0, (height - searchIcon->height()) / 2);
++	}, searchIcon->lifetime());
 +	_macCompose->setClickedCallback([=] {
 +		_macComposeMenu = base::make_unique_q<Ui::PopupMenu>(
 +			_macCompose,
@@ -1265,7 +1292,7 @@ index 4529103..247142a 100644
  void Widget::setupStories() {
  	_stories->verticalScrollEvents(
  	) | rpl::on_next([=](not_null<QWheelEvent*> e) {
-@@ -2044,13 +2202,17 @@ void Widget::updateLockUnlockPosition() {
+@@ -2044,13 +2215,17 @@ void Widget::updateLockUnlockPosition() {
  	const auto stories = (_stories && !_stories->isHidden())
  		? _stories->collapsedGeometryCurrent()
  		: Stories::List::CollapsedGeometry();
@@ -1285,7 +1312,7 @@ index 4529103..247142a 100644
  }
  
  void Widget::updateHasFocus(not_null<QWidget*> focused) {
-@@ -4662,16 +4824,29 @@ void Widget::updateControlsGeometry() {
+@@ -4662,16 +4837,29 @@ void Widget::updateControlsGeometry() {
  		? ((smallw - ratiow) / float64(smallw - _narrowWidth))
  		: 0.;
  
@@ -1322,7 +1349,7 @@ index 4529103..247142a 100644
  	_searchControls->setGeometry(0, filterAreaTop, ratiow, filterAreaHeight);
  	if (_subsectionTopBar) {
  		_subsectionTopBar->setGeometryWithNarrowRatio(
-@@ -4680,7 +4855,17 @@ void Widget::updateControlsGeometry() {
+@@ -4680,7 +4868,17 @@ void Widget::updateControlsGeometry() {
  			narrowRatio);
  	}
  
@@ -1341,7 +1368,7 @@ index 4529103..247142a 100644
  	filterLeft = anim::interpolate(filterLeft, _narrowWidth, narrowRatio);
  	_search->setGeometryToLeft(
  		filterLeft,
-@@ -4689,14 +4874,14 @@ void Widget::updateControlsGeometry() {
+@@ -4689,14 +4887,14 @@ void Widget::updateControlsGeometry() {
  		_search->height());
  
  	auto mainMenuLeft = anim::interpolate(
@@ -1358,7 +1385,7 @@ index 4529103..247142a 100644
  		_mainMenu.toggle->y()
  			+ _mainMenu.toggle->height()
  			+ st::dialogsFilterPadding.y());
-@@ -4729,9 +4914,14 @@ void Widget::updateControlsGeometry() {
+@@ -4729,9 +4927,14 @@ void Widget::updateControlsGeometry() {
  					- st::dialogsStories.photoLeft),
  				_narrowWidth,
  				narrowRatio)
@@ -1374,7 +1401,7 @@ index 4529103..247142a 100644
  			inFolderTitle ? style::al_left : style::al_right,
  			{ 0, expandedStoriesTop, barw, st::dialogsStoriesFull.height });
  	}
-@@ -4746,6 +4936,9 @@ void Widget::updateControlsGeometry() {
+@@ -4746,6 +4949,9 @@ void Widget::updateControlsGeometry() {
  	updateLockUnlockPosition();
  
  	auto bottomSkip = 0;
@@ -1384,7 +1411,7 @@ index 4529103..247142a 100644
  	const auto putBottomButton = [&](auto &button) {
  		if (button && !button->isHidden()) {
  			const auto buttonHeight = button->height();
-@@ -4757,6 +4950,7 @@ void Widget::updateControlsGeometry() {
+@@ -4757,6 +4963,7 @@ void Widget::updateControlsGeometry() {
  				buttonHeight);
  		}
  	};
@@ -1392,7 +1419,7 @@ index 4529103..247142a 100644
  	putBottomButton(_updateTelegram);
  	putBottomButton(_downloadBar);
  	putBottomButton(_loadMoreChats);
-@@ -4821,7 +5015,7 @@ void Widget::updateControlsGeometry() {
+@@ -4821,7 +5028,7 @@ void Widget::updateControlsGeometry() {
  		if (_chatFilters) {
  			_chatFilters->move(0, chatFiltersTop);
  		}
@@ -1401,7 +1428,7 @@ index 4529103..247142a 100644
  			+ ((_chatFilters
  				&& _searchState.query.isEmpty()
  				&& !_openedForum
-@@ -4829,6 +5023,21 @@ void Widget::updateControlsGeometry() {
+@@ -4829,6 +5036,21 @@ void Widget::updateControlsGeometry() {
  				&& !searchInPeer())
  				? (_chatFilters->height() * (1. - narrowRatio))
  				: 0);
@@ -1610,7 +1637,7 @@ index 6c500a4..821d680 100644
  	Painter &p,
  	const BasicRow &row,
 diff --git a/Telegram/SourceFiles/history/history_widget.cpp b/Telegram/SourceFiles/history/history_widget.cpp
-index 562437c..e07af2e 100644
+index 562437c..f6fb37d 100644
 --- a/Telegram/SourceFiles/history/history_widget.cpp
 +++ b/Telegram/SourceFiles/history/history_widget.cpp
 @@ -7638,7 +7638,7 @@ void HistoryWidget::moveFieldControls() {
@@ -1648,7 +1675,7 @@ index 562437c..e07af2e 100644
  }
  
  void HistoryWidget::itemRemoved(not_null<const HistoryItem*> item) {
-@@ -11474,7 +11475,20 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+@@ -11474,7 +11475,23 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
  	}
  	p.setInactive(
  		controller()->isGifPausedAtLeastFor(Window::GifPauseReason::Any));
@@ -1658,7 +1685,10 @@ index 562437c..e07af2e 100644
 +		const auto radius = st::historyComposeCapsuleRadius;
 +		const auto half = st::lineWidth / 2.;
 +		auto hq = PainterHighQualityEnabler(p);
-+		p.setPen(QPen(st::inputBorderFg, st::lineWidth));
++		// macOS separator: text color at 12%, visible in any theme.
++		p.setPen(QPen(
++			anim::with_alpha(st::windowFg->c, 0.12),
++			st::lineWidth));
 +		p.setBrush(st::historyReplyBg);
 +		p.drawRoundedRect(
 +			QRectF(myrtlrect(0, backy, width(), backh).marginsRemoved(
@@ -1671,15 +1701,22 @@ index 562437c..e07af2e 100644
  	const auto media = (!_previewDrawPreview && drawMsgText)
  		? drawMsgText->media()
 diff --git a/Telegram/SourceFiles/history/view/controls/history_view_compose_controls.cpp b/Telegram/SourceFiles/history/view/controls/history_view_compose_controls.cpp
-index aaa4ae0..300e09c 100644
+index aaa4ae0..c8667e2 100644
 --- a/Telegram/SourceFiles/history/view/controls/history_view_compose_controls.cpp
 +++ b/Telegram/SourceFiles/history/view/controls/history_view_compose_controls.cpp
-@@ -5734,7 +5734,8 @@ void ComposeControls::paintBackground(QPainter &p, QRect full, QRect clip) {
+@@ -5734,7 +5734,15 @@ void ComposeControls::paintBackground(QPainter &p, QRect full, QRect clip) {
  	if (_backgroundRect) {
  		auto hq = PainterHighQualityEnabler(p);
  		p.setBrush(_st.bg);
 -		p.setPen(Qt::NoPen);
-+		p.setPen(QPen(_st.bgBorder, st::lineWidth));
++		// macOS separator: text color at 12%, visible in any theme.
++		if (_st.bgBorder) {
++			p.setPen(QPen(
++				anim::with_alpha(st::windowFg->c, 0.12),
++				st::lineWidth));
++		} else {
++			p.setPen(Qt::NoPen);
++		}
 +		full = full.marginsRemoved(_st.bgMargins);
  		const auto r = _st.radius;
  		if (_commentsShown && !_commentsShown->isHidden()) {
@@ -1850,7 +1887,7 @@ index aa58185..15bd172 100644
  topBarClearButton: RoundButton(defaultLightButton) {
  	width: -18px;
 diff --git a/Telegram/SourceFiles/mainwidget.cpp b/Telegram/SourceFiles/mainwidget.cpp
-index ec9a349..072e0b8 100644
+index ec9a349..c70cc22 100644
 --- a/Telegram/SourceFiles/mainwidget.cpp
 +++ b/Telegram/SourceFiles/mainwidget.cpp
 @@ -97,6 +97,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
@@ -1891,13 +1928,16 @@ index ec9a349..072e0b8 100644
  	} else {
  		auto thirdSectionWidth = _thirdSection ? _thirdColumnWidth : 0;
  		if (_thirdSection) {
-@@ -2784,13 +2794,21 @@ void MainWidget::updateControlsGeometry() {
+@@ -2784,13 +2794,24 @@ void MainWidget::updateControlsGeometry() {
  			accumulate_min(
  				dialogsWidth,
  				width() - st::columnMinimalWidthMain);
 -			_dialogs->setGeometryToLeft(0, 0, dialogsWidth, height());
-+			// macOS: the chat list floats with insets 8/8/8/0.
-+			const auto inset = st::dialogsMacPanelInset;
++			// macOS: the chat list floats with insets 8/8/8/0,
++			// the narrow (userpics only) column stays flush.
++			const auto inset = (dialogsWidth < st::columnMinimalWidthLeft)
++				? 0
++				: st::dialogsMacPanelInset;
 +			_dialogs->setGeometryToLeft(
 +				inset,
 +				inset,
@@ -1911,11 +1951,11 @@ index ec9a349..072e0b8 100644
  				dialogsWidth,
  				shadowTop,
 -				st::lineWidth,
-+				0,
++				(_dialogs->x() > 0) ? 0 : st::lineWidth,
  				shadowHeight);
  		}
  		if (_thirdShadow) {
-@@ -2860,6 +2878,33 @@ void MainWidget::destroyThirdSection() {
+@@ -2860,6 +2881,36 @@ void MainWidget::destroyThirdSection() {
  	_thirdSection.destroy();
  }
  
@@ -1936,14 +1976,17 @@ index ec9a349..072e0b8 100644
 +			auto rounded = QPainterPath();
 +			rounded.addRoundedRect(inner, r, r);
 +			p.fillPath(outside.subtracted(rounded), st::windowBg);
-+			p.setPen(QPen(st::windowBgRipple, st::lineWidth));
++			// macOS separator: text color at 12%, visible in any theme.
++			p.setPen(QPen(
++				anim::with_alpha(st::windowFg->c, 0.12),
++				st::lineWidth));
 +			p.setBrush(Qt::NoBrush);
 +			p.drawPath(rounded);
 +		}, panel->lifetime());
 +		orderWidgets();
 +	}
 +	_dialogsPanel->setGeometry(_dialogs->geometry());
-+	_dialogsPanel->setVisible(!isOneColumn());
++	_dialogsPanel->setVisible(!isOneColumn() && _dialogs->x() > 0);
 +}
 +
  void MainWidget::refreshResizeAreas() {
@@ -1971,7 +2014,7 @@ index 3e9ac4a..2883658 100644
  	object_ptr<Ui::ResizeArea> _firstColumnResizeArea = { nullptr };
  	object_ptr<Ui::ResizeArea> _thirdColumnResizeArea = { nullptr };
 diff --git a/Telegram/SourceFiles/media/view/media_view.style b/Telegram/SourceFiles/media/view/media_view.style
-index 9586275..7f30021 100644
+index 9586275..9f8a45b 100644
 --- a/Telegram/SourceFiles/media/view/media_view.style
 +++ b/Telegram/SourceFiles/media/view/media_view.style
 @@ -780,6 +780,8 @@ storiesComposeControls: ComposeControls(defaultComposeControls) {
@@ -1979,7 +2022,7 @@ index 9586275..7f30021 100644
  	radius: storiesComposeRadius;
  	padding: margins(1px, 8px, 1px, 6px);
 +	bgMargins: margins(0px, 0px, 0px, 0px);
-+	bgBorder: transparent;
++	bgBorder: false;
  	field: InputField(historyComposeField) {
  		textMargins: margins(2px, 0px, 2px, 0px);
  		textFg: storiesComposeWhiteText;
