@@ -17453,6 +17453,50 @@ index fd2a4d4..850fd1e 100644
  	}
  	const auto widthProgress = (_startWidth < 0 || dt >= _widthDuration)
  		? 1.
+diff --git a/ui/layers/box_content.cpp b/ui/layers/box_content.cpp
+index b255ca0..14da6b8 100644
+--- a/ui/layers/box_content.cpp
++++ b/ui/layers/box_content.cpp
+@@ -142,10 +142,18 @@ QPointer<RoundButton> BoxContent::addButton(
+ 		rpl::producer<QString> text,
+ 		Fn<void()> clickCallback,
+ 		const style::RoundButton &st) {
++	// macOS alerts fill the first (rightmost, default) button with accent.
++	// Box styles inheriting defaultBox hold a copy, so compare by value.
++	const auto &def = st::defaultBoxButton;
++	const auto primary = (st.textFg->c == def.textFg->c)
++		&& (st.textBg->c == def.textBg->c)
++		&& (st.height == def.height)
++		&& (st.fullRadius == def.fullRadius)
++		&& !std::exchange(_primaryButtonAdded, true);
+ 	auto button = object_ptr<RoundButton>(
+ 		this,
+ 		std::move(text),
+-		st);
++		primary ? st::defaultBoxButtonPrimary : st);
+ 	auto result = QPointer<RoundButton>(button.data());
+ 	result->setClickedCallback(std::move(clickCallback));
+ 	getDelegate()->addButton(std::move(button));
+diff --git a/ui/layers/box_content.h b/ui/layers/box_content.h
+index d260678..fec3006 100644
+--- a/ui/layers/box_content.h
++++ b/ui/layers/box_content.h
+@@ -161,6 +161,7 @@ public:
+ 		getDelegate()->setCustomCornersFilling(corners);
+ 	}
+ 	void clearButtons() {
++		_primaryButtonAdded = false;
+ 		getDelegate()->clearButtons();
+ 	}
+ 	QPointer<AbstractButton> addButton(object_ptr<AbstractButton> button);
+@@ -328,6 +329,7 @@ private:
+ 	bool _preparing = false;
+ 	bool _noContentMargin = false;
+ 	bool _closeByEscape = true;
++	bool _primaryButtonAdded = false;
+ 	int _innerTopSkip = 0;
+ 	int _innerBottomSkip = 0;
+ 	object_ptr<ScrollArea> _scroll = { nullptr };
 diff --git a/ui/layers/layer_widget.cpp b/ui/layers/layer_widget.cpp
 index ec3171e..0379ad3 100644
 --- a/ui/layers/layer_widget.cpp
@@ -17530,10 +17574,57 @@ index ec3171e..0379ad3 100644
  		return;
  	}
 diff --git a/ui/layers/layers.style b/ui/layers/layers.style
-index ebb7796..1939b35 100644
+index ebb7796..31edfc7 100644
 --- a/ui/layers/layers.style
 +++ b/ui/layers/layers.style
-@@ -145,14 +145,15 @@ boxLoadingAnimation: InfiniteRadialAnimation(defaultInfiniteRadialAnimation) {
+@@ -35,18 +35,31 @@ Box {
+ }
+ 
+ boxDuration: 200;
+-boxRadius: 8px;
++boxRadius: 20px; // macOS ViewController.cornerRadius
+ 
+ boxButtonFont: font(boxFontSize semibold);
+ defaultBoxButtonTextStyle: TextStyle(semiboldTextStyle) {
+ 	font: font(14px semibold);
+ }
++// macOS ModalAlertController: 40px capsules, sizeToFit(20) padding.
+ defaultBoxButton: RoundButton(defaultLightButton) {
+-	width: -30px;
+-	height: 34px;
+-	textTop: 7px;
++	width: -40px;
++	height: 40px;
++	fullRadius: true;
++	textTop: 10px;
+ 	style: defaultBoxButtonTextStyle;
+ }
++defaultBoxButtonPrimary: RoundButton(defaultBoxButton) {
++	textFg: activeButtonFg;
++	textFgOver: activeButtonFgOver;
++	numbersTextFg: activeButtonSecondaryFg;
++	numbersTextFgOver: activeButtonSecondaryFgOver;
++	textBg: activeButtonBg;
++	textBgOver: activeButtonBgOver;
++	ripple: RippleAnimation(defaultRippleAnimation) {
++		color: activeButtonBgRipple;
++	}
++}
+ 
+ boxLabelStyle: TextStyle(boxTextStyle) {
+ 	lineHeight: 22px;
+@@ -122,8 +135,8 @@ boxLittleSkip: 10px;
+ boxMediumSkip: 20px;
+ 
+ defaultBox: Box {
+-	buttonPadding: margins(6px, 10px, 10px, 10px);
+-	buttonHeight: 34px;
++	buttonPadding: margins(10px, 10px, 20px, 20px);
++	buttonHeight: 40px;
+ 	button: defaultBoxButton;
+ 	margin: margins(0px, 10px, 0px, 10px);
+ 	bg: boxBg;
+@@ -145,14 +158,15 @@ boxLoadingAnimation: InfiniteRadialAnimation(defaultInfiniteRadialAnimation) {
  }
  boxLoadingSize: 20px;
  
