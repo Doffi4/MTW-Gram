@@ -825,10 +825,19 @@ zv;vP%$ZJ+7@=x)98&Fk%g!%&ge@K%5Z2Mo5<bR|-@ZaeFi!1rh693NspXL9Z|9_-D
 cu!;iW|M4|c6=321y$|(|cKzdJDgQnF7tA&yiU0rr
 
 diff --git a/Telegram/SourceFiles/chat_helpers/chat_helpers.style b/Telegram/SourceFiles/chat_helpers/chat_helpers.style
-index 6291aef..5181db6 100644
+index 6291aef..6ede1ee 100644
 --- a/Telegram/SourceFiles/chat_helpers/chat_helpers.style
 +++ b/Telegram/SourceFiles/chat_helpers/chat_helpers.style
-@@ -1327,6 +1327,9 @@ historyComposeField: InputField(defaultInputField) {
+@@ -258,6 +258,8 @@ ComposeControls {
+ 	bg: color;
+ 	radius: pixels;
+ 	padding: margins;
++	bgMargins: margins;
++	bgBorder: color;
+ 
+ 	field: InputField;
+ 	fieldLeft: pixels;
+@@ -1327,6 +1329,9 @@ historyComposeField: InputField(defaultInputField) {
  historyComposeFieldMaxHeight: 224px;
  historyComposeFieldFadeHeight: 6px;
  historySendRight: 2px;
@@ -838,6 +847,19 @@ index 6291aef..5181db6 100644
  historySendPadding: 9px;
  // historyMinHeight: 56px;
  
+@@ -1652,8 +1657,10 @@ defaultChooseSendAs: ChooseSendAs {
+ }
+ defaultComposeControls: ComposeControls {
+ 	bg: historyComposeAreaBg;
+-	radius: 0px;
+-	padding: margins(historySendRight, historySendPadding, historySendRight, historySendPadding);
++	radius: historyComposeCapsuleRadius;
++	padding: margins(10px, historySendPadding, 10px, historySendPadding);
++	bgMargins: margins(historyComposeCapsuleMargin, 4px, historyComposeCapsuleMargin, 4px);
++	bgBorder: inputBorderFg;
+ 
+ 	field: historyComposeField;
+ 	send: historySend;
 diff --git a/Telegram/SourceFiles/dialogs/dialogs.style b/Telegram/SourceFiles/dialogs/dialogs.style
 index 922cac2..d1bf1d8 100644
 --- a/Telegram/SourceFiles/dialogs/dialogs.style
@@ -1122,7 +1144,7 @@ index 6c500a4..821d680 100644
  	Painter &p,
  	const BasicRow &row,
 diff --git a/Telegram/SourceFiles/history/history_widget.cpp b/Telegram/SourceFiles/history/history_widget.cpp
-index 562437c..6414269 100644
+index 562437c..e07af2e 100644
 --- a/Telegram/SourceFiles/history/history_widget.cpp
 +++ b/Telegram/SourceFiles/history/history_widget.cpp
 @@ -7638,7 +7638,7 @@ void HistoryWidget::moveFieldControls() {
@@ -1160,7 +1182,7 @@ index 562437c..6414269 100644
  }
  
  void HistoryWidget::itemRemoved(not_null<const HistoryItem*> item) {
-@@ -11474,7 +11475,18 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+@@ -11474,7 +11475,20 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
  	}
  	p.setInactive(
  		controller()->isGifPausedAtLeastFor(Window::GifPauseReason::Any));
@@ -1168,18 +1190,34 @@ index 562437c..6414269 100644
 +	{
 +		const auto skip = st::historyComposeCapsuleMargin;
 +		const auto radius = st::historyComposeCapsuleRadius;
++		const auto half = st::lineWidth / 2.;
 +		auto hq = PainterHighQualityEnabler(p);
-+		p.setPen(Qt::NoPen);
++		p.setPen(QPen(st::inputBorderFg, st::lineWidth));
 +		p.setBrush(st::historyReplyBg);
 +		p.drawRoundedRect(
-+			myrtlrect(0, backy, width(), backh).marginsRemoved(
-+				{ skip, skip / 2, skip, skip / 2 }),
++			QRectF(myrtlrect(0, backy, width(), backh).marginsRemoved(
++				{ skip, skip / 2, skip, skip / 2 })).marginsRemoved(
++					{ half, half, half, half }),
 +			radius,
 +			radius);
 +	}
  
  	const auto media = (!_previewDrawPreview && drawMsgText)
  		? drawMsgText->media()
+diff --git a/Telegram/SourceFiles/history/view/controls/history_view_compose_controls.cpp b/Telegram/SourceFiles/history/view/controls/history_view_compose_controls.cpp
+index aaa4ae0..300e09c 100644
+--- a/Telegram/SourceFiles/history/view/controls/history_view_compose_controls.cpp
++++ b/Telegram/SourceFiles/history/view/controls/history_view_compose_controls.cpp
+@@ -5734,7 +5734,8 @@ void ComposeControls::paintBackground(QPainter &p, QRect full, QRect clip) {
+ 	if (_backgroundRect) {
+ 		auto hq = PainterHighQualityEnabler(p);
+ 		p.setBrush(_st.bg);
+-		p.setPen(Qt::NoPen);
++		p.setPen(QPen(_st.bgBorder, st::lineWidth));
++		full = full.marginsRemoved(_st.bgMargins);
+ 		const auto r = _st.radius;
+ 		if (_commentsShown && !_commentsShown->isHidden()) {
+ 			p.drawRoundedRect(_commentsShown->geometry(), r, r);
 diff --git a/Telegram/SourceFiles/history/view/history_view_chat_section.cpp b/Telegram/SourceFiles/history/view/history_view_chat_section.cpp
 index e3c019e..26624a5 100644
 --- a/Telegram/SourceFiles/history/view/history_view_chat_section.cpp
@@ -1345,6 +1383,19 @@ index aa58185..15bd172 100644
  topBarNameRightPadding: 3px;
  topBarClearButton: RoundButton(defaultLightButton) {
  	width: -18px;
+diff --git a/Telegram/SourceFiles/media/view/media_view.style b/Telegram/SourceFiles/media/view/media_view.style
+index 9586275..7f30021 100644
+--- a/Telegram/SourceFiles/media/view/media_view.style
++++ b/Telegram/SourceFiles/media/view/media_view.style
+@@ -780,6 +780,8 @@ storiesComposeControls: ComposeControls(defaultComposeControls) {
+ 	bg: storiesComposeBg;
+ 	radius: storiesComposeRadius;
+ 	padding: margins(1px, 8px, 1px, 6px);
++	bgMargins: margins(0px, 0px, 0px, 0px);
++	bgBorder: transparent;
+ 	field: InputField(historyComposeField) {
+ 		textMargins: margins(2px, 0px, 2px, 0px);
+ 		textFg: storiesComposeWhiteText;
 diff --git a/Telegram/SourceFiles/test/test_palette.cpp b/Telegram/SourceFiles/test/test_palette.cpp
 index 4d781ba..7232a6e 100644
 --- a/Telegram/SourceFiles/test/test_palette.cpp
