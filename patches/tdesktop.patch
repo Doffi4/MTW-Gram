@@ -825,29 +825,33 @@ zv;vP%$ZJ+7@=x)98&Fk%g!%&ge@K%5Z2Mo5<bR|-@ZaeFi!1rh693NspXL9Z|9_-D
 cu!;iW|M4|c6=321y$|(|cKzdJDgQnF7tA&yiU0rr
 
 diff --git a/Telegram/SourceFiles/chat_helpers/chat_helpers.style b/Telegram/SourceFiles/chat_helpers/chat_helpers.style
-index 6291aef..0106c35 100644
+index 6291aef..b621c75 100644
 --- a/Telegram/SourceFiles/chat_helpers/chat_helpers.style
 +++ b/Telegram/SourceFiles/chat_helpers/chat_helpers.style
-@@ -258,6 +258,8 @@ ComposeControls {
+@@ -258,6 +258,9 @@ ComposeControls {
  	bg: color;
  	radius: pixels;
  	padding: margins;
 +	bgMargins: margins;
 +	bgBorder: bool;
++	circleSkip: pixels;
  
  	field: InputField;
  	fieldLeft: pixels;
-@@ -1327,6 +1329,9 @@ historyComposeField: InputField(defaultInputField) {
+@@ -1327,6 +1330,12 @@ historyComposeField: InputField(defaultInputField) {
  historyComposeFieldMaxHeight: 224px;
  historyComposeFieldFadeHeight: 6px;
  historySendRight: 2px;
 +// macOS ChatInputStateContainers: floating rounded compose container.
 +historyComposeCapsuleMargin: 8px;
 +historyComposeCapsuleRadius: 20px;
++// Attach and send are round buttons outside the capsule (ChatInputView).
++historyComposeCircleSkip: 14px;
++historyComposeFieldInset: 10px;
  historySendPadding: 9px;
  // historyMinHeight: 56px;
  
-@@ -1412,7 +1417,7 @@ historyAttachEmojiInner: IconButton(historyAttach) {
+@@ -1412,7 +1421,7 @@ historyAttachEmojiInner: IconButton(historyAttach) {
  }
  historyAttachEmoji: EmojiButton {
  	inner: historyAttachEmojiInner;
@@ -856,7 +860,7 @@ index 6291aef..0106c35 100644
  	lineFg: historyEmojiCircleFg;
  	lineFgOver: historyEmojiCircleFgOver;
  }
-@@ -1652,8 +1657,10 @@ defaultChooseSendAs: ChooseSendAs {
+@@ -1652,8 +1661,11 @@ defaultChooseSendAs: ChooseSendAs {
  }
  defaultComposeControls: ComposeControls {
  	bg: historyComposeAreaBg;
@@ -866,6 +870,7 @@ index 6291aef..0106c35 100644
 +	padding: margins(10px, historySendPadding, 10px, historySendPadding);
 +	bgMargins: margins(historyComposeCapsuleMargin, 4px, historyComposeCapsuleMargin, 4px);
 +	bgBorder: true;
++	circleSkip: historyComposeCircleSkip;
  
  	field: historyComposeField;
  	send: historySend;
@@ -1721,7 +1726,7 @@ index 40897a8..9bd8318 100644
  			}
  			top += height;
 diff --git a/Telegram/SourceFiles/history/history_widget.cpp b/Telegram/SourceFiles/history/history_widget.cpp
-index 562437c..8f446d9 100644
+index 562437c..3ad63c0 100644
 --- a/Telegram/SourceFiles/history/history_widget.cpp
 +++ b/Telegram/SourceFiles/history/history_widget.cpp
 @@ -236,6 +236,7 @@ constexpr auto kDisplayEditTimeWarningMs = 300 * 1000;
@@ -1740,7 +1745,21 @@ index 562437c..8f446d9 100644
  
  	setupFastButtonMode();
  	initAiButton();
-@@ -7638,7 +7640,7 @@ void HistoryWidget::moveFieldControls() {
+@@ -6603,10 +6605,11 @@ void HistoryWidget::mouseMoveEvent(QMouseEvent *e) {
+ 
+ void HistoryWidget::updateOverStates(QPoint pos) {
+ 	const auto isReadyToForward = readyToForward();
++	const auto box = composeBoxRect();
+ 	const auto detailsRect = QRect(
+-		0,
++		box.x(),
+ 		_field->y() - st::historySendPadding - st::historyReplyHeight,
+-		width() - _fieldBarCancel->width(),
++		box.width() - _fieldBarCancel->width(),
+ 		st::historyReplyHeight);
+ 	const auto hasWebPage = !!_previewDrawPreview;
+ 	const auto inDetails = detailsRect.contains(pos)
+@@ -7638,7 +7641,7 @@ void HistoryWidget::moveFieldControls() {
  // (_botStart|_unblock|_joinChannel|_muteUnmute|_reportMessages)
  
  	auto buttonsBottom = bottom - _attachToggle->height();
@@ -1749,24 +1768,47 @@ index 562437c..8f446d9 100644
  	if (_botMenu) {
  		const auto skip = st::historyBotMenuSkip;
  		_botMenu->moveToLeft(left + skip, buttonsBottom + skip);
-@@ -7661,7 +7663,7 @@ void HistoryWidget::moveFieldControls() {
+@@ -7653,6 +7656,7 @@ void HistoryWidget::moveFieldControls() {
+ 		_sendAs->moveToLeft(left, buttonsBottom);
+ 		left += _sendAs->width();
+ 	}
++	left += st::historyComposeCircleSkip;
+ 	const auto fieldTop = bottom - fieldHeight() - st::historySendPadding;
+ 	_field->moveToLeft(left, fieldTop);
+ 	_richDraftPreview->moveToLeft(left, fieldTop);
+@@ -7661,8 +7665,9 @@ void HistoryWidget::moveFieldControls() {
  			left,
  			bottom - fieldHeight() - st::historySendPadding);
  	}
 -	auto right = st::historySendRight;
+-	_send->moveToRight(right, buttonsBottom); right += _send->width();
 +	auto right = st::historySendRight + st::historyComposeCapsuleMargin;
- 	_send->moveToRight(right, buttonsBottom); right += _send->width();
++	_send->moveToRight(right, buttonsBottom);
++	right += _send->width() + st::historyComposeCircleSkip;
  	_voiceRecordBar->moveToLeft(0, bottom - _voiceRecordBar->height());
  	_tabbedSelectorToggle->moveToRight(right, buttonsBottom);
-@@ -7731,6 +7733,7 @@ void HistoryWidget::updateFieldSize() {
+ 	_botKeyboardHide->moveToRight(right, buttonsBottom);
+@@ -7696,8 +7701,8 @@ void HistoryWidget::moveFieldControls() {
+ 	updateExpandButtonGeometry();
+ 	updateDiscardRichDraftGeometry();
+ 
+-	_fieldBarCancel->moveToRight(
+-		0,
++	_fieldBarCancel->moveToLeft(
++		composeBoxRect().right() + 1 - _fieldBarCancel->width(),
+ 		_field->y() - st::historySendPadding - _fieldBarCancel->height());
+ 	if (_inlineResults) {
+ 		_inlineResults->moveBottom(_field->y() - st::historySendPadding);
+@@ -7731,6 +7736,8 @@ void HistoryWidget::updateFieldSize() {
  	auto fieldWidth = width()
  		- _attachToggle->width()
  		- st::historySendRight
 +		- 2 * st::historyComposeCapsuleMargin
++		- 2 * st::historyComposeCircleSkip
  		- _send->width()
  		- _tabbedSelectorToggle->width();
  	if (_botMenu) {
-@@ -8430,7 +8433,7 @@ void HistoryWidget::updateControlsGeometry() {
+@@ -8430,7 +8437,7 @@ void HistoryWidget::updateControlsGeometry() {
  		topShadowLeft,
  		_topBar->bottomNoMargins(),
  		width - topShadowLeft - topShadowRight,
@@ -1775,7 +1817,7 @@ index 562437c..8f446d9 100644
  }
  
  void HistoryWidget::itemRemoved(not_null<const HistoryItem*> item) {
-@@ -8955,7 +8958,7 @@ void HistoryWidget::startItemRevealAnimations() {
+@@ -8955,7 +8962,7 @@ void HistoryWidget::startItemRevealAnimations() {
  							0.,
  							1.,
  							reveal ? reveal->duration : st::itemRevealDuration,
@@ -1784,11 +1826,12 @@ index 562437c..8f446d9 100644
  						if (item->out() || _history->peer->isSelf()) {
  							_list->theme()->rotateComplexGradientBackground();
  						}
-@@ -11474,7 +11477,23 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+@@ -11474,7 +11481,36 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
  	}
  	p.setInactive(
  		controller()->isGifPausedAtLeastFor(Window::GifPauseReason::Any));
 -	p.fillRect(myrtlrect(0, backy, width(), backh), st::historyReplyBg);
++	const auto box = composeBoxRect();
 +	{
 +		const auto skip = st::historyComposeCapsuleMargin;
 +		const auto radius = st::historyComposeCapsuleRadius;
@@ -1800,19 +1843,167 @@ index 562437c..8f446d9 100644
 +			st::lineWidth));
 +		p.setBrush(st::historyReplyBg);
 +		p.drawRoundedRect(
-+			QRectF(myrtlrect(0, backy, width(), backh).marginsRemoved(
++			QRectF(myrtlrect(box.x(), backy, box.width(), backh).marginsRemoved(
 +				{ skip, skip / 2, skip, skip / 2 })).marginsRemoved(
 +					{ half, half, half, half }),
 +			radius,
 +			radius);
++		for (const auto button : {
++				static_cast<QWidget*>(_attachToggle.data()),
++				static_cast<QWidget*>(_send.get()) }) {
++			if (!button->isHidden()) {
++				p.drawEllipse(
++					QRectF(button->geometry()).center(),
++					radius - half,
++					radius - half);
++			}
++		}
 +	}
++	// Bar contents are laid out for a full-width box, move it into ours.
++	p.translate(box.x(), 0);
  
  	const auto media = (!_previewDrawPreview && drawMsgText)
  		? drawMsgText->media()
+@@ -11514,7 +11550,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+ 		st::historyLinkIcon.paint(
+ 			p,
+ 			st::historyReplyIconPosition + QPoint(0, backy),
+-			width());
++			box.width());
+ 		const auto textTop = backy + st::msgReplyPadding.top();
+ 		auto previewLeft = st::historyReplySkip;
+ 
+@@ -11527,7 +11563,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+ 			previewLeft += st::historyReplyPreview + st::msgReplyBarSkip;
+ 		}
+ 		p.setPen(st::historyReplyNameFg);
+-		const auto elidedWidth = width()
++		const auto elidedWidth = box.width()
+ 			- previewLeft
+ 			- _fieldBarCancel->width()
+ 			- st::msgReplyPadding.right();
+@@ -11549,7 +11585,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+ 		const auto pausedSpoiler = paused || On(PowerSaving::kChatSpoiler);
+ 		auto replyLeft = st::historyReplySkip;
+ 		if (_suggestOptions) {
+-			_suggestOptions->paintIcon(p, 0, backy, width());
++			_suggestOptions->paintIcon(p, 0, backy, box.width());
+ 		} else {
+ 			const auto quoted = _replyTo
+ 				&& !HistoryView::Reply::ComposePreviewQuote(_replyTo).empty();
+@@ -11560,7 +11596,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+ 				: st::historyReplyIcon).paint(
+ 					p,
+ 					st::historyReplyIconPosition + QPoint(0, backy),
+-					width());
++					box.width());
+ 		}
+ 		if (drawMsgText) {
+ 			if (hasPreview) {
+@@ -11601,17 +11637,17 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+ 				replyLeft += st::historyReplyPreview + st::msgReplyBarSkip;
+ 			}
+ 			if (_suggestOptions) {
+-				_suggestOptions->paintLines(p, replyLeft, backy, width());
++				_suggestOptions->paintLines(p, replyLeft, backy, box.width());
+ 			} else {
+ 				p.setPen(st::historyReplyNameFg);
+ 				if (_editMsgId) {
+-					paintEditHeader(p, rect, replyLeft, backy);
++					paintEditHeader(p, rect.translated(-box.x(), 0), replyLeft, backy);
+ 				} else {
+ 					_replyToName.drawElided(
+ 						p,
+ 						replyLeft,
+ 						backy + st::msgReplyPadding.top(),
+-						width()
++						box.width()
+ 							- replyLeft
+ 							- _fieldBarCancel->width()
+ 							- st::msgReplyPadding.right());
+@@ -11623,7 +11659,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+ 						st::msgReplyPadding.top()
+ 							+ st::msgServiceNameFont->height
+ 							+ backy),
+-					.availableWidth = width()
++					.availableWidth = box.width()
+ 						- replyLeft
+ 						- _fieldBarCancel->width()
+ 						- st::msgReplyPadding.right(),
+@@ -11645,7 +11681,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+ 					+ st::msgDateFont->ascent,
+ 				st::msgDateFont->elided(
+ 					tr::lng_profile_loading(tr::now),
+-					width()
++					box.width()
+ 						- replyLeft
+ 						- _fieldBarCancel->width()
+ 						- st::msgReplyPadding.right()));
+@@ -11653,16 +11689,26 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+ 	} else if (hasForward) {
+ 		st::historyForwardIcon.paint(
+ 			p,
+-			st::historyReplyIconPosition + QPoint(0, backy), width());
++			st::historyReplyIconPosition + QPoint(0, backy), box.width());
+ 		const auto x = st::historyReplySkip;
+-		const auto available = width()
++		const auto available = box.width()
+ 			- x
+ 			- _fieldBarCancel->width()
+ 			- st::msgReplyPadding.right();
+-		_forwardPanel->paint(p, x, backy, available, width());
++		_forwardPanel->paint(p, x, backy, available, box.width());
+ 	} else if (_suggestOptions) {
+-		_suggestOptions->paintBar(p, 0, backy, width());
++		_suggestOptions->paintBar(p, 0, backy, box.width());
+ 	}
++	p.translate(-box.x(), 0);
++}
++
++QRect HistoryWidget::composeBoxRect() const {
++	// Box edges sit a capsule margin outside the capsule.
++	const auto outer = st::historyComposeFieldInset
++		+ st::historyComposeCapsuleMargin;
++	const auto left = _field->x() - outer;
++	const auto right = _send->x() - st::historyComposeCircleSkip + outer;
++	return QRect(left, 0, right - left, height());
+ }
+ 
+ void HistoryWidget::paintEditHeader(
+diff --git a/Telegram/SourceFiles/history/history_widget.h b/Telegram/SourceFiles/history/history_widget.h
+index 6369a0f..a7fc512 100644
+--- a/Telegram/SourceFiles/history/history_widget.h
++++ b/Telegram/SourceFiles/history/history_widget.h
+@@ -658,6 +658,7 @@ private:
+ 	void sendInlineResult(InlineBots::ResultSelected result);
+ 
+ 	void drawField(Painter &p, const QRect &rect);
++	[[nodiscard]] QRect composeBoxRect() const;
+ 	void paintEditHeader(
+ 		Painter &p,
+ 		const QRect &rect,
 diff --git a/Telegram/SourceFiles/history/view/controls/history_view_compose_controls.cpp b/Telegram/SourceFiles/history/view/controls/history_view_compose_controls.cpp
-index aaa4ae0..4f6e4db 100644
+index aaa4ae0..77adb8a 100644
 --- a/Telegram/SourceFiles/history/view/controls/history_view_compose_controls.cpp
 +++ b/Telegram/SourceFiles/history/view/controls/history_view_compose_controls.cpp
+@@ -395,7 +395,7 @@ void FieldHeader::init() {
+ 	) | rpl::on_next([=] {
+ 		Painter p(this);
+ 		p.setInactive(_show->paused(Window::GifPauseReason::Any));
+-		p.fillRect(rect(), st::historyComposeAreaBg);
++		// No fill: the compose capsule painted by _wrap shows through.
+ 
+ 		const auto position = st::historyReplyIconPosition;
+ 		if (_suggestOptions) {
+@@ -2891,7 +2891,7 @@ void ComposeControls::init() {
+ 	_wrap->paintRequest(
+ 	) | rpl::on_next([=](QRect clip) {
+ 		auto p = QPainter(_wrap.get());
+-		paintBackground(p, _wrap->rect(), clip);
++		paintBackground(p, _wrap->rect(), clip, true);
+ 	}, _wrap->lifetime());
+ 
+ 
 @@ -3271,6 +3271,9 @@ void ComposeControls::initField() {
  		return false;
  	});
@@ -1823,7 +2014,77 @@ index aaa4ae0..4f6e4db 100644
  	_field->setEditLinkCallback(
  		DefaultEditLinkCallback(_show, _field, &_st.boxField));
  	_field->setEditLanguageCallback(DefaultEditLanguageCallback(_show));
-@@ -5734,7 +5737,15 @@ void ComposeControls::paintBackground(QPainter &p, QRect full, QRect clip) {
+@@ -5047,6 +5050,7 @@ void ComposeControls::updateControlsGeometry(QSize size) {
+ 		- (_attachToggle ? _attachToggle->width() : 0)
+ 		- (_sendAs ? _sendAs->width() : 0)
+ 		- _st.padding.right()
++		- 2 * _st.circleSkip
+ 		- _send->width()
+ 		- (_editStars ? _editStars->width() : 0)
+ 		- (_tabbedSelectorToggle->isHidden()
+@@ -5108,6 +5112,7 @@ void ComposeControls::updateControlsGeometry(QSize size) {
+ 		_sendAs->moveToLeft(left, buttonsTop);
+ 		left += _sendAs->width();
+ 	}
++	left += _st.circleSkip;
+ 	const auto fieldHeight = composeFieldHeight();
+ 	const auto fieldTop = size.height() - _st.padding.bottom() - fieldHeight;
+ 	_field->moveToLeft(left, fieldTop);
+@@ -5119,11 +5124,6 @@ void ComposeControls::updateControlsGeometry(QSize size) {
+ 		_fieldDisabled->moveToLeft(left, fieldTop);
+ 	}
+ 
+-	_header->resizeToWidth(size.width());
+-	_header->moveToLeft(
+-		0,
+-		fieldTop - _st.padding.top() - _header->height());
+-
+ 	auto right = 0;
+ 	if (_starsReaction) {
+ 		_starsReaction->moveToRight(right, buttonsTop);
+@@ -5131,7 +5131,7 @@ void ComposeControls::updateControlsGeometry(QSize size) {
+ 	}
+ 	right += _st.padding.right();
+ 	_send->moveToRight(right, buttonsTop);
+-	right += _send->width();
++	right += _send->width() + _st.circleSkip;
+ 	if (_editStars) {
+ 		_editStars->moveToRight(right, buttonsTop);
+ 		right += _editStars->width();
+@@ -5195,6 +5195,12 @@ void ComposeControls::updateControlsGeometry(QSize size) {
+ 	updateExpandButtonGeometry();
+ 	updateDiscardRichDraftGeometry();
+ 
++	const auto box = composeBoxRect(size);
++	_header->resizeToWidth(box.width());
++	_header->moveToLeft(
++		box.x(),
++		fieldTop - _st.padding.top() - _header->height());
++
+ 	_voiceRecordBar->resizeToWidth(size.width());
+ 	_voiceRecordBar->moveToLeft(
+ 		0,
+@@ -5730,19 +5736,55 @@ void ComposeControls::updateAttachBotsMenu() {
+ 	}, _attachBotsMenu->lifetime());
+ }
+ 
+-void ComposeControls::paintBackground(QPainter &p, QRect full, QRect clip) {
++QRect ComposeControls::composeBoxRect(QSize size) const {
++	if (!_st.circleSkip) {
++		return QRect(QPoint(), size);
++	}
++	// Box edges sit a capsule margin outside the capsule.
++	const auto outer = st::historyComposeFieldInset + _st.bgMargins.left();
++	const auto left = _field->x() - outer;
++	const auto right = _send->x() - _st.circleSkip + outer;
++	return QRect(left, 0, right - left, size.height());
++}
++
++void ComposeControls::paintBackground(
++		QPainter &p,
++		QRect full,
++		QRect clip,
++		bool field) {
  	if (_backgroundRect) {
  		auto hq = PainterHighQualityEnabler(p);
  		p.setBrush(_st.bg);
@@ -1836,10 +2097,53 @@ index aaa4ae0..4f6e4db 100644
 +		} else {
 +			p.setPen(Qt::NoPen);
 +		}
-+		full = full.marginsRemoved(_st.bgMargins);
  		const auto r = _st.radius;
++		if (field && _st.circleSkip) {
++			// Attach and send are round buttons outside the capsule.
++			for (const auto button : {
++					static_cast<QWidget*>(_attachToggle),
++					static_cast<QWidget*>(_send.get()) }) {
++				if (button && !button->isHidden()) {
++					p.drawEllipse(QRectF(button->geometry()).center(), r, r);
++				}
++			}
++			full = composeBoxRect(full.size()).translated(full.topLeft());
++		}
++		full = full.marginsRemoved(_st.bgMargins);
  		if (_commentsShown && !_commentsShown->isHidden()) {
  			p.drawRoundedRect(_commentsShown->geometry(), r, r);
+-			full.setLeft(full.left()
+-				+ _commentsShown->width()
+-				+ _st.commentsSkip);
++			if (!field || !_st.circleSkip) {
++				full.setLeft(full.left()
++					+ _commentsShown->width()
++					+ _st.commentsSkip);
++			}
+ 		}
+-		if (_starsReaction) {
++		if (_starsReaction && (!field || !_st.circleSkip)) {
+ 			full.setWidth(full.width()
+ 				- _starsReaction->width()
+ 				- _st.starsSkip);
+diff --git a/Telegram/SourceFiles/history/view/controls/history_view_compose_controls.h b/Telegram/SourceFiles/history/view/controls/history_view_compose_controls.h
+index b79537f..d71868c 100644
+--- a/Telegram/SourceFiles/history/view/controls/history_view_compose_controls.h
++++ b/Telegram/SourceFiles/history/view/controls/history_view_compose_controls.h
+@@ -416,7 +416,12 @@ private:
+ 		Fn<void(Api::SendOptions)> send);
+ 	bool updateReplaceMediaButton();
+ 	void updateOuterGeometry(QRect rect);
+-	void paintBackground(QPainter &p, QRect full, QRect clip);
++	void paintBackground(
++		QPainter &p,
++		QRect full,
++		QRect clip,
++		bool field = false);
++	[[nodiscard]] QRect composeBoxRect(QSize size) const;
+ 
+ 	[[nodiscard]] auto baseSendButtonType() const;
+ 	[[nodiscard]] auto computeSendButtonType() const;
 diff --git a/Telegram/SourceFiles/history/view/history_view_chat_section.cpp b/Telegram/SourceFiles/history/view/history_view_chat_section.cpp
 index e3c019e..26624a5 100644
 --- a/Telegram/SourceFiles/history/view/history_view_chat_section.cpp
@@ -2218,15 +2522,16 @@ index 3e9ac4a..2883658 100644
  	object_ptr<Ui::ResizeArea> _firstColumnResizeArea = { nullptr };
  	object_ptr<Ui::ResizeArea> _thirdColumnResizeArea = { nullptr };
 diff --git a/Telegram/SourceFiles/media/view/media_view.style b/Telegram/SourceFiles/media/view/media_view.style
-index 9586275..9f8a45b 100644
+index 9586275..2170084 100644
 --- a/Telegram/SourceFiles/media/view/media_view.style
 +++ b/Telegram/SourceFiles/media/view/media_view.style
-@@ -780,6 +780,8 @@ storiesComposeControls: ComposeControls(defaultComposeControls) {
+@@ -780,6 +780,9 @@ storiesComposeControls: ComposeControls(defaultComposeControls) {
  	bg: storiesComposeBg;
  	radius: storiesComposeRadius;
  	padding: margins(1px, 8px, 1px, 6px);
 +	bgMargins: margins(0px, 0px, 0px, 0px);
 +	bgBorder: false;
++	circleSkip: 0px;
  	field: InputField(historyComposeField) {
  		textMargins: margins(2px, 0px, 2px, 0px);
  		textFg: storiesComposeWhiteText;
