@@ -2904,6 +2904,35 @@ index c8f0cd8..8387fb3 100644
  	const auto y = 1. - RiseProgress(_progress);
  	_position = target + QPoint(
  		int(base::SafeRound(_residual->x() * x)),
+diff --git a/Telegram/SourceFiles/ui/resize_area.h b/Telegram/SourceFiles/ui/resize_area.h
+index c711477..3b79520 100644
+--- a/Telegram/SourceFiles/ui/resize_area.h
++++ b/Telegram/SourceFiles/ui/resize_area.h
+@@ -56,8 +56,15 @@ protected:
+ 		}
+ 	}
+ 	void mouseMoveEvent(QMouseEvent *e) override {
+-		if (_moving) {
++		// Relayout sends synthetic mouse moves back here, while the cursor
++		// keeps moving that recursion has no end; the next real move wins.
++		if (_moving && !_firing) {
++			const auto alive = QPointer<ResizeArea>(this);
++			_firing = true;
+ 			_moveLeft.fire(e->globalPos().x() - _moveStartLeft);
++			if (alive) {
++				_firing = false;
++			}
+ 		}
+ 	}
+ 
+@@ -72,6 +79,7 @@ private:
+ 	rpl::event_stream<> _moveFinished;
+ 	int _moveStartLeft = 0;
+ 	bool _moving = false;
++	bool _firing = false;
+ 
+ };
+ 
 diff --git a/Telegram/SourceFiles/ui/vertical_list.cpp b/Telegram/SourceFiles/ui/vertical_list.cpp
 index fca7301..3f4c754 100644
 --- a/Telegram/SourceFiles/ui/vertical_list.cpp
