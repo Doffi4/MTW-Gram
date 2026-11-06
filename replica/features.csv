@@ -20,7 +20,7 @@ feature,area,priority,original,clone,notes
 Поле ввода-капсула с авто-ростом,composer,must,yes,yes,S11 B7 layout §5.4; source: HistoryWidget + ComposeControls; patches/README.md
 Ответ и редактирование в поле ввода,composer,must,yes,yes,44a 44b; source: HistoryWidget + FieldHeader; patches/README.md
 Отправка по Enter и анимация отправки,composer,must,yes,yes,B1-B4; source: native Enter + анимации форка; patches/README.md
-Панель эмодзи / стикеров / GIF,composer,must,yes,partial,S13 46-49; status: Панели tdesktop; оформление не доведено
+Панель эмодзи / стикеров / GIF,composer,must,yes,partial,S13 46-49; status: Панели tdesktop; оформление не доведено; этап profile/panels: попап 358/r16 и согласованная пружина408; остальные состояния partial; recon/profile-and-panels.md
 Меню вложений,composer,must,yes,partial,S14 47; status: Открытие по клику перенесено; содержимое и оформление меню не доведены
 Цвета Day / Day Classic / Night / Night Accent / System,theme,must,yes,partial,tokens §1.1 110 ролей; status: Палитры перенесены; автоматическая System-тема не проверена
 Шрифт Inter по шкале SF-метрик,theme,must,yes,yes,tokens §3; SF не переносим; source: Inter и веса lib_ui.patch; patches/README.md
@@ -29,11 +29,11 @@ Push/pop переходы правой части,animation,must,yes,yes,A3-A5; 
 Корень настроек в стиле групп InputData,settings,must,yes,yes,S16 measure/settings-group.png; source: SettingsButton cardSkip/cardRadius; patches/README.md
 Строки настроек: кнопка / значение / тумблер / радио,settings,must,yes,partial,S18-S28; status: Карточки и переключатели сделаны; остальные типы строк не доведены
 Alert в стиле Telegram-mac,dialogs,must,yes,yes,S30 60 61; source: defaultBox/defaultBoxButton; patches/README.md
-Профиль канала/чата с табами медиа,profile,should,yes,partial,S15 50-53; status: Есть общий фон и шапка Info; профиль целиком не перенесён
+Профиль канала/чата с табами медиа,profile,should,yes,partial,"S15 50-53; status: Есть общий фон и шапка Info; профиль целиком не перенесён; этап profile/panels: карточки 600/r20, аватар 120, кнопки до170, вкладки40/3; формы и особые состояния остаются partial; recon/profile-and-panels.md"
 Режим выделения сообщений,chat,should,yes,no,S12 44c I1
 Плашки закрепа и перевода,chat,should,yes,no,S09 42
 Свайп-ответ,chat,should,yes,partial,D1; status: Жест tdesktop; D1 не согласован с recon
-Боковая (trailing) панель стикеров/GIF,composer,should,yes,partial,49a; status: Боковая панель tdesktop; оформление не доведено
+Боковая (trailing) панель стикеров/GIF,composer,should,yes,partial,49a; status: Боковая панель tdesktop; оформление не доведено; сохранённая ширина и ограничения третьей колонки не менялись; перенос анимации sidebar ещё не завершён
 Запись голосового в поле ввода,composer,should,yes,yes,L1-L4; source: VoiceRecordBar capsule; patches/README.md
 Индикатор печати,chat,should,yes,no,K1-K2
 Превью ссылок / файлов / медиа в пузыре,chat,should,yes,partial,layout §5.5; status: Размеры и группировка пузырей перенесены; типы медиа не сверены

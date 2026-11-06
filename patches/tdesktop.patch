@@ -825,7 +825,7 @@ zv;vP%$ZJ+7@=x)98&Fk%g!%&ge@K%5Z2Mo5<bR|-@ZaeFi!1rh693NspXL9Z|9_-D
 cu!;iW|M4|c6=321y$|(|cKzdJDgQnF7tA&yiU0rr
 
 diff --git a/Telegram/SourceFiles/chat_helpers/chat_helpers.style b/Telegram/SourceFiles/chat_helpers/chat_helpers.style
-index 6291aef..b621c75 100644
+index 6291aef..47d60dc 100644
 --- a/Telegram/SourceFiles/chat_helpers/chat_helpers.style
 +++ b/Telegram/SourceFiles/chat_helpers/chat_helpers.style
 @@ -258,6 +258,9 @@ ComposeControls {
@@ -838,6 +838,26 @@ index 6291aef..b621c75 100644
  
  	field: InputField;
  	fieldLeft: pixels;
+@@ -511,16 +514,16 @@ emojiCategoryIconTop: 6px;
+ emojiPanAnimation: PanelAnimation(defaultPanelAnimation) {
+ 	fadeBg: emojiPanBg;
+ }
+-emojiPanWidth: 345px;
++emojiPanWidth: 358px;
+ emojiPanMinHeight: 278px;
+ emojiPanMaxHeight: 640px;
+ emojiPanHeightRatio: 0.75;
+-emojiPanShowDuration: 200;
++emojiPanShowDuration: 408;
+ emojiPanDuration: 200;
+ emojiPanHover: windowBgOver;
+ emojiPanSlideDuration: 200;
+ emojiPanArea: size(34px, 32px);
+-emojiPanRadius: 8px;
++emojiPanRadius: 16px;
+ emojiPanReactionsPreviewPadding: margins(10px, 20px, 10px, 20px);
+ emojiPanEmojiPreviewMinHeight: 160px;
+ emojiPanEmojiPreviewRadius: 8px + 8px + 4px;
 @@ -1327,6 +1330,12 @@ historyComposeField: InputField(defaultInputField) {
  historyComposeFieldMaxHeight: 224px;
  historyComposeFieldFadeHeight: 6px;
@@ -3036,7 +3056,7 @@ index 30024a8..9bf8c66 100644
  		updateMembersShowArea();
  		update();
 diff --git a/Telegram/SourceFiles/info/info.style b/Telegram/SourceFiles/info/info.style
-index aa58185..7096ee8 100644
+index aa58185..f7ed778 100644
 --- a/Telegram/SourceFiles/info/info.style
 +++ b/Telegram/SourceFiles/info/info.style
 @@ -116,18 +116,18 @@ infoLayerMediaSearch: SearchFieldRow(infoMediaSearch) {
@@ -3223,7 +3243,7 @@ index aa58185..7096ee8 100644
  	bg: boxBg;
  	mediaCancel: infoLayerTopBarMediaCancel;
  	mediaActionsSkip: 6px;
-@@ -373,7 +375,7 @@ infoLayerTopBar: InfoTopBar(infoTopBar) {
+@@ -373,10 +375,10 @@ infoLayerTopBar: InfoTopBar(infoTopBar) {
  	radius: boxRadius;
  }
  
@@ -3231,8 +3251,44 @@ index aa58185..7096ee8 100644
 +infoLayerTopBarMenuPosition: point(48px, 45px);
  
  
- infoProfileTopBarHeightMax: 180px + infoLayerTopBarHeight;
-@@ -602,11 +604,9 @@ infoBlockHeaderLabel: FlatLabel(infoProfileStatus) {
+-infoProfileTopBarHeightMax: 180px + infoLayerTopBarHeight;
++infoProfileTopBarHeightMax: 234px + infoLayerTopBarHeight;
+ 
+ infoProfileBirthdayConfettiSize: 360px;
+ infoProfileBirthdayDigitSize: 64px;
+@@ -384,15 +386,15 @@ infoProfileBirthdayDigitSize: 64px;
+ 
+ infoProfileTopBarActionButtonBgOpacity: 0.16;
+ infoProfileTopBarBackdropRippleOpacity: 0.125;
+-infoProfileTopBarActionButtonSize: 52px;
++infoProfileTopBarActionButtonSize: 66px;
+ infoProfileTopBarActionButtonIconSize: 23px;
+ infoProfileTopBarActionButtonLottieSize: infoProfileTopBarActionButtonIconSize - 0px;
+-infoProfileTopBarActionButtonIconTop: 6px;
++infoProfileTopBarActionButtonIconTop: 12px;
+ infoProfileTopBarActionButtonTextTop: infoProfileTopBarActionButtonIconSize + infoProfileTopBarActionButtonIconTop + 1px;
+ infoProfileTopBarActionButtonTextSkip: 4px;
+-infoProfileTopBarActionButtonFont: font(11px);
++infoProfileTopBarActionButtonFont: font(13px);
+ 
+-infoProfileTopBarActionButtonsPadding: margins(18px, 0px, 18px, 16px);
++infoProfileTopBarActionButtonsPadding: margins(15px, 0px, 15px, 16px);
+ infoProfileTopBarActionButtonsHeight: infoProfileTopBarActionButtonSize + infoProfileTopBarActionButtonsPadding.topBottom;
+ 
+ infoProfileTopBarStep2: infoProfileTopBarHeightMax - infoLayerTopBarHeight;
+@@ -541,6 +543,11 @@ infoPeerBadge: InfoPeerBadge {
+ infoIconFg: windowBoldFg;
+ 
+ infoProfileSkip: 7px;
++infoProfileCardWidthMax: 600px;
++infoProfileCardSkip: 12px;
++infoProfileCardRadius: 20px;
++infoProfileSectionSkip: 20px;
++infoProfileTopBarActionButtonWidthMax: 170px;
+ 
+ infoProfileLabeledButtonQr: IconButton(defaultIconButton) {
+ 	width: 34px;
+@@ -602,27 +609,27 @@ infoBlockHeaderLabel: FlatLabel(infoProfileStatus) {
  }
  infoBlockHeaderPosition: point(79px, 17px);
  
@@ -3245,7 +3301,50 @@ index aa58185..7096ee8 100644
  }
  infoProfileButton: SettingsButton(defaultSettingsButton) {
  	style: defaultTextStyle;
-@@ -916,11 +916,19 @@ editPeerUsernameFieldMargins: margins(22px, 0px, 22px, 0px);
+ 
+-	padding: margins(79px, 10px, 8px, 8px);
++	padding: margins(64px, 10px, 26px, 10px);
+ 	iconLeft: 22px;
+ 
+ 	toggle: infoProfileToggle;
+ 	toggleOver: infoProfileToggleOver;
+-	toggleSkip: 20px;
++	toggleSkip: 26px;
++	cardSkip: infoProfileCardSkip;
++	cardRadius: infoProfileCardRadius;
+ }
+ infoMainButton: SettingsButton(infoProfileButton) {
+ 	textFg: lightButtonFg;
+ 	textFgOver: lightButtonFgOver;
+ 	style: semiboldTextStyle;
+-	padding: margins(23px, 10px, 8px, 8px);
++	padding: margins(26px, 10px, 26px, 10px);
+ }
+ infoSharedMediaButton: infoProfileButton;
+ 
+@@ -716,14 +723,16 @@ infoMediaGridSizeStep: 16px;
+ infoMediaTabsMinBodyWidth: infoMediaMinGridSize + infoMediaSkip + infoMediaSkip + infoMediaTabsRightSkip;
+ 
+ infoProfileTabsStrip: ProfileTabsStrip {
+-	height: 48px;
++	height: 52px;
+ 	margin: margins(8px, 6px, 8px, 6px);
+ 	skip: 0px;
+ 	tabPadding: margins(16px, 0px, 16px, 0px);
+-	activeSkip: 4px;
+-	style: semiboldTextStyle;
+-	fg: windowSubTextFg;
+-	fgActive: lightButtonFg;
++	activeSkip: 3px;
++	style: TextStyle(defaultTextStyle) {
++		font: font(14px semibold);
++	}
++	fg: windowFg;
++	fgActive: windowFg;
+ 	bg: windowBg;
+ 	bgActive: lightButtonBgOver;
+ 	ripple: RippleAnimation(defaultRippleAnimation) {
+@@ -916,11 +925,19 @@ editPeerUsernameFieldMargins: margins(22px, 0px, 22px, 0px);
  historyTopBarBack: IconButton(infoTopBarBack) {
  	width: 52px;
  }
@@ -3268,21 +3367,252 @@ index aa58185..7096ee8 100644
  topBarClearButton: RoundButton(defaultLightButton) {
  	width: -18px;
 diff --git a/Telegram/SourceFiles/info/info_content_widget.cpp b/Telegram/SourceFiles/info/info_content_widget.cpp
-index bcecc3c..4f962ae 100644
+index bcecc3c..d2d06fb 100644
 --- a/Telegram/SourceFiles/info/info_content_widget.cpp
 +++ b/Telegram/SourceFiles/info/info_content_widget.cpp
-@@ -89,7 +89,10 @@ ContentWidget::ContentWidget(
+@@ -89,7 +89,11 @@ ContentWidget::ContentWidget(
  		if (value != Wrap::Layer) {
  			applyAdditionalScroll(0);
  		}
 -		_bg = (value == Wrap::Layer)
-+		// macOS: settings rows are cards on the grouped list background.
-+		_bg = (_controller->section().type() == Section::Type::Settings)
++		// macOS: profile and settings cards share the grouped list background.
++		_bg = (_controller->section().type() == Section::Type::Settings
++			|| _controller->section().type() == Section::Type::Profile)
 +			? st::boxDividerBg
 +			: (value == Wrap::Layer)
  			? st::boxBg
  			: st::profileBg;
  		update();
+diff --git a/Telegram/SourceFiles/info/profile/info_profile_actions.cpp b/Telegram/SourceFiles/info/profile/info_profile_actions.cpp
+index 5efc894..d080088 100644
+--- a/Telegram/SourceFiles/info/profile/info_profile_actions.cpp
++++ b/Telegram/SourceFiles/info/profile/info_profile_actions.cpp
+@@ -1062,7 +1062,7 @@ auto AddMainButton(
+ 		const style::SettingsButton &st = st::infoMainButton) {
+ 	const auto button = AddActionButton(
+ 		parent,
+-		std::move(text) | rpl::map(tr::upper),
++		std::move(text),
+ 		std::move(toggleOn),
+ 		std::move(callback),
+ 		nullptr,
+diff --git a/Telegram/SourceFiles/info/profile/info_profile_actions.style b/Telegram/SourceFiles/info/profile/info_profile_actions.style
+index b70c39c..f42357e 100644
+--- a/Telegram/SourceFiles/info/profile/info_profile_actions.style
++++ b/Telegram/SourceFiles/info/profile/info_profile_actions.style
+@@ -7,10 +7,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
+ */
+ using "info/info.style";
+ 
+-infoProfileLabeledPadding: margins(23px, 9px, 20px, 7px);
+-infoProfileLabeledUsernamePadding: margins(23px, 9px, 20px, 7px);
++infoProfileLabeledPadding: margins(26px, 12px, 26px, 12px);
++infoProfileLabeledUsernamePadding: margins(26px, 12px, 26px, 12px);
+ infoProfilePersonalChannelPadding: margins(79px, 9px, 20px, 7px);
+-infoProfileLabeledButtonQrRightSkip: 0px;
++infoProfileLabeledButtonQrRightSkip: 12px;
+ infoIconInformation: icon {{ "info/info_information", infoIconFg }};
+ infoIconAddMember: icon {{ "info/info_add_member", infoIconFg }};
+ infoIconEmojiStatusAccess: icon {{ "menu/read_reactions", infoIconFg, point(4px, 4px) }};
+diff --git a/Telegram/SourceFiles/info/profile/info_profile_inner_widget.cpp b/Telegram/SourceFiles/info/profile/info_profile_inner_widget.cpp
+index bcdf9cc..7b34ef5 100644
+--- a/Telegram/SourceFiles/info/profile/info_profile_inner_widget.cpp
++++ b/Telegram/SourceFiles/info/profile/info_profile_inner_widget.cpp
+@@ -46,6 +46,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
+ #include "ui/widgets/scroll_area.h"
+ #include "ui/widgets/shadow.h"
+ #include "ui/wrap/fade_wrap.h"
++#include "ui/wrap/padding_wrap.h"
+ #include "ui/wrap/vertical_layout.h"
+ #include "ui/wrap/slide_wrap.h"
+ #include "ui/new_badges.h"
+@@ -314,8 +315,12 @@ object_ptr<Ui::RpWidget> InnerWidget::setupContent(
+ 		}, raw->lifetime());
+ 		stack.addPlainSeparator();
+ 		stack.add(Section{
+-			.widget = std::move(tabsHost),
++			.widget = object_ptr<Ui::PaddingWrap<TabsHost>>(
++				result.data(),
++				std::move(tabsHost),
++				QMargins(st::infoProfileCardSkip, 0, st::infoProfileCardSkip, 0)),
+ 			.shown = raw->heightValue() | rpl::map(_1 > 0),
++			.card = false,
+ 		});
+ 	};
+ 	if (_topic || _sublist || _savedMessages) {
+@@ -409,6 +414,7 @@ Section InnerWidget::makeMembersSection(
+ 	return Section{
+ 		.widget = std::move(wrap),
+ 		.shown = raw->toggledValue(),
++		.card = false,
+ 	};
+ }
+ 
+@@ -474,8 +480,12 @@ int InnerWidget::resizeGetHeight(int newWidth) {
+ 	_inResize = true;
+ 	auto guard = gsl::finally([&] { _inResize = false; });
+ 
+-	_content->resizeToWidth(newWidth);
+-	_content->moveToLeft(0, 0);
++	const auto contentWidth = std::min(
++		newWidth,
++		st::infoProfileCardWidthMax + 2 * st::infoProfileCardSkip);
++	const auto contentLeft = (newWidth - contentWidth) / 2;
++	_content->resizeToWidth(contentWidth);
++	_content->moveToLeft(contentLeft, 0, newWidth);
+ 	updateDesiredHeight();
+ 	return _content->heightNoMargins();
+ }
+diff --git a/Telegram/SourceFiles/info/profile/info_profile_section_stack.cpp b/Telegram/SourceFiles/info/profile/info_profile_section_stack.cpp
+index 3710660..ff0b574 100644
+--- a/Telegram/SourceFiles/info/profile/info_profile_section_stack.cpp
++++ b/Telegram/SourceFiles/info/profile/info_profile_section_stack.cpp
+@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
+ #include "info/profile/info_profile_section_stack.h"
+ 
+ #include "ui/widgets/box_content_divider.h"
++#include "ui/painter.h"
+ #include "ui/widgets/labels.h"
+ #include "ui/wrap/slide_wrap.h"
+ #include "ui/wrap/vertical_layout.h"
+@@ -23,12 +24,7 @@ namespace {
+ [[nodiscard]] not_null<Ui::SlideWrap<>*> CreatePlainSeparator(
+ 		not_null<Ui::VerticalLayout*> layout) {
+ 	auto inner = object_ptr<Ui::VerticalLayout>(layout);
+-	Ui::AddSkip(inner.data(), st::infoProfileSkip);
+-	inner->add(object_ptr<Ui::BoxContentDivider>(
+-		inner.data(),
+-		st::boxDividerHeight,
+-		st::defaultDividerBar));
+-	Ui::AddSkip(inner.data(), st::infoProfileSkip);
++	Ui::AddSkip(inner.data(), st::infoProfileSectionSkip);
+ 	return layout->add(object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
+ 		layout,
+ 		std::move(inner)));
+@@ -72,6 +68,20 @@ void SectionStack::add(Section section) {
+ 	Expects(!_finalized);
+ 	Expects(section.widget != nullptr);
+ 
++	if (section.card) {
++		const auto widget = section.widget.data();
++		widget->paintRequest() | rpl::on_next([=] {
++			auto p = Painter(widget);
++			auto hq = PainterHighQualityEnabler(p);
++			p.setPen(Qt::NoPen);
++			p.setBrush(st::windowBg);
++			p.drawRoundedRect(
++				widget->rect().marginsRemoved({
++					st::infoProfileCardSkip, 0, st::infoProfileCardSkip, 0 }),
++				st::infoProfileCardRadius,
++				st::infoProfileCardRadius);
++		}, widget->lifetime());
++	}
+ 	_rows.push_back({
+ 		.type = RowType::Block,
+ 		.widget = std::move(section.widget),
+diff --git a/Telegram/SourceFiles/info/profile/info_profile_section_stack.h b/Telegram/SourceFiles/info/profile/info_profile_section_stack.h
+index dbfc4e9..0823a8d 100644
+--- a/Telegram/SourceFiles/info/profile/info_profile_section_stack.h
++++ b/Telegram/SourceFiles/info/profile/info_profile_section_stack.h
+@@ -20,6 +20,7 @@ namespace Info::Profile {
+ struct Section {
+ 	object_ptr<Ui::RpWidget> widget = { nullptr };
+ 	rpl::producer<bool> shown;
++	bool card = true;
+ };
+ 
+ class SectionStack final {
+diff --git a/Telegram/SourceFiles/info/profile/info_profile_top_bar.cpp b/Telegram/SourceFiles/info/profile/info_profile_top_bar.cpp
+index 8ca7fa8..df4f232 100644
+--- a/Telegram/SourceFiles/info/profile/info_profile_top_bar.cpp
++++ b/Telegram/SourceFiles/info/profile/info_profile_top_bar.cpp
+@@ -904,10 +904,17 @@ void TopBar::finalizeActions(
+ 		const auto bottom = size.height()
+ 			- padding.bottom()
+ 			- int(base::SafeRound(reserve * progress));
++		const auto actionsWidth = std::max(0, std::min({
++			size.width() - rect::m::sum::h(padding),
++			st::infoProfileCardWidthMax - rect::m::sum::h(padding),
++			int(buttons.size()) * st::infoProfileTopBarActionButtonWidthMax
++				+ std::max(int(buttons.size()) - 1, 0)
++					* st::infoProfileTopBarActionButtonsSpace }));
++		const auto actionsLeft = (size.width() - actionsWidth) / 2;
+ 		_actions->setGeometry(
+-			padding.left(),
++			actionsLeft,
+ 			bottom - resultHeight,
+-			size.width() - rect::m::sum::h(padding),
++			actionsWidth,
+ 			resultHeight);
+ 		if (_pills) {
+ 			_pills->place(bottom + st::infoProfileTopBarPillsSkip, progress);
+@@ -3985,10 +3992,8 @@ TopBarActionButtonStyle TopBar::mapActionStyle(
+ 		};
+ 	} else {
+ 		return TopBarActionButtonStyle{
+-			.bgColor = anim::with_alpha(
+-				st::boxBg->c,
+-				1. - st::infoProfileTopBarActionButtonBgOpacity),
+-			.fgColor = std::nullopt,
++			.bgColor = st::windowBg->c,
++			.fgColor = st::windowActiveTextFg->c,
+ 			.shadowColor = Window::Theme::IsNightMode()
+ 				? std::nullopt
+ 				: std::make_optional(st::windowShadowFgFallback->c),
+diff --git a/Telegram/SourceFiles/info/profile/info_profile_top_bar.style b/Telegram/SourceFiles/info/profile/info_profile_top_bar.style
+index a899aee..a66fd8e 100644
+--- a/Telegram/SourceFiles/info/profile/info_profile_top_bar.style
++++ b/Telegram/SourceFiles/info/profile/info_profile_top_bar.style
+@@ -53,12 +53,12 @@ infoLayerTopBarBlackEdit: IconButton(infoLayerTopBarEdit) {
+ 	iconOver: icon {{ "menu/edit", windowBoldFg }};
+ 	ripple: universalRippleAnimation;
+ }
+-infoProfileTopBarTitleTop: 113px;
+-infoProfileTopBarStatusTop: 134px;
+-infoProfileTopBarPhotoTop: 24px;
++infoProfileTopBarTitleTop: 153px;
++infoProfileTopBarStatusTop: 174px;
++infoProfileTopBarPhotoTop: 20px;
+ infoProfileTopBarPhotoBgShift: 55px;
+ infoProfileTopBarPhotoBgNoActionsShift: 30px;
+-infoProfileTopBarPhotoSize: 80px;
++infoProfileTopBarPhotoSize: 120px;
+ infoProfileTopBarLastSeenSkip: point(8px, 1px);
+ infoProfileTopBarGiftSize: 20px;
+ infoProfileTopBarGiftLeft: point(15px, 13px);
+@@ -72,7 +72,7 @@ infoProfileTopBarActionButtonShadow: BoxShadow {
+ 	offset: point(0px, 0px);
+ 	opacity: 0.25;
+ }
+-infoProfileTopBarActionButtonsSpace: 10px;
++infoProfileTopBarActionButtonsSpace: 20px;
+ infoProfileTopBarActionMenuSkip: 10px;
+ infoProfileTopBarActionMessage: icon{{ "profile/message-23x23", windowBoldFg }};
+ infoProfileTopBarActionMute: icon{{ "profile/mute-23x23", windowBoldFg }};
+diff --git a/Telegram/SourceFiles/info/profile/info_profile_widget.cpp b/Telegram/SourceFiles/info/profile/info_profile_widget.cpp
+index f616cd8..6f1852b 100644
+--- a/Telegram/SourceFiles/info/profile/info_profile_widget.cpp
++++ b/Telegram/SourceFiles/info/profile/info_profile_widget.cpp
+@@ -23,6 +23,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
+ #include "lang/lang_keys.h"
+ #include "info/info_controller.h"
+ #include "base/event_filter.h"
++#include "styles/style_info.h"
+ 
+ #include <QtWidgets/QApplication>
+ #include <QtWidgets/QScrollBar>
+@@ -272,7 +273,10 @@ void Widget::updateTabsStripFloatGeometry() {
+ 		|| !_pinnedToTop) {
+ 		return;
+ 	}
+-	const auto stripWidth = std::min(strip->naturalWidth(), width());
++	const auto stripWidth = std::min({
++		strip->naturalWidth(),
++		width(),
++		st::infoProfileCardWidthMax });
+ 	strip->resizeToWidth(stripWidth);
+ 	strip->moveToLeft(0, 0);
+ 	_tabsStripFloat->setGeometry(
 diff --git a/Telegram/SourceFiles/mainwidget.cpp b/Telegram/SourceFiles/mainwidget.cpp
 index ec9a349..c70cc22 100644
 --- a/Telegram/SourceFiles/mainwidget.cpp

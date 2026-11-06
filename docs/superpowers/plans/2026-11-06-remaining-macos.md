@@ -34,3 +34,16 @@ Profile and panels; message state styling; animation remainder; gallery; calls a
 ## Validation
 
 Debug build tools/build-win.bat Debug: exit 0, build/build-info-navigation.log. Inline source review completed without subagents. UI omitted at user request. Remaining stages above are still pending.
+
+## Task 3: Profile and entertainment panel layout
+
+- [x] Read profile/card/tab/sidebar geometry from the local macOS source and recon screenshots; check all native layout and viewport consumers.
+- [x] Add a failing geometry check, then constrain and center profile content/actions; keep media coordinate transforms and search/selection bindings.
+- [x] Use existing SettingsButton card painting, card backgrounds for detail sections, 120px avatar, 600px cards, and 40px media tab islands.
+- [x] Align popup panel width/radius to 358/16; retain the existing 408ms menu spring instead of applying the sidebar's 300ms timing to a popup.
+- [x] Finish Debug build; rerun geometry and compose regression checks.
+- [x] Regenerate and verify patches; update implementation evidence without marking every profile/panel state complete.
+
+Excluded from this stage: sidebar width preference/drag constraints, profile editing forms, colored-profile-specific animation, new icons, live UI validation. Existing behavior is preserved where no macOS-specific styling was added.
+
+Task 3 validation: Debug exit 0 (build/build-profile-panels-fixed.log); three profile geometry checks and compose visibility regression pass. Fixed a missing styles/style_info.h include found by the first compile. UI not run.
