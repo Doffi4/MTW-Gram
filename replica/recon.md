@@ -191,6 +191,8 @@ Relationships: User n–n Chat (участники), Chat 1–n Message, Message
 
 См. `features.csv`. Must: 30, should: 24, could: 14, skip: 9.
 
+Статусы реализации обновлены 2026-11-06: `yes` — реализовано в исходниках (включая явно отмеченное сохранённое поведение tdesktop), `partial` — перенесена часть оформления, `no` — перенос не подтверждён, `skip` — вне объёма. Эти статусы не означают визуальной проверки. Ссылки на основание — в notes. Recon-чеклист описывает полноту исследования macOS, а не готовность Windows-форка.
+
 ## Out of scope (cannot or should not be cloned)
 
 - Сеть Telegram, пользователи, MTProto — используются как есть через tdesktop с собственным api_id.

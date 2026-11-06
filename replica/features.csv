@@ -1,54 +1,54 @@
 feature,area,priority,original,clone,notes
 Окно с прозрачным titlebar и traffic lights-отступом,window,must,yes,no,layout §1; на Windows — свой titlebar Qt
-Три стадии ширины левой колонки (полная / 90pt / single),window,must,yes,no,layout §2; S01 70-72
-Перетаскивание разделителя колонок с сохранением ширины,window,must,yes,no,kLeftColumnWidth
-Строка чата 70pt: аватар 50 / имя / превью / время / бейдж,chat list,must,yes,no,tokens §4; S02
-Закреплённые чаты и архив-капсула,chat list,must,yes,no,S02
-Бейджи непрочитанных (акцент / серый mute / @ / реакция),chat list,must,yes,no,S02 S09
-Галочки прочтения и «вы:» и черновик в превью,chat list,must,yes,no,S02
-Табы папок над списком,chat list,must,yes,no,S02 H1-H2
-Таб-бар снизу (контакты / звонки / чаты / настройки),chat list,must,yes,no,S02
-Поиск-капсула и глобальный поиск с секциями,search,must,yes,no,S07 30-32
-Контекстное меню чата,chat list,must,yes,no,S03 behavior §2
-Шапка чата: имя / статус / поиск / меню,chat,must,yes,no,layout §3
-Пузыри in/out с радиусами по позиции в группе и хвостом,chat,must,yes,no,layout §5.2; C1
-Группировка сообщений по автору и времени,chat,must,yes,no,layout §5.2
-Дата-пилюля и плашка «Непрочитанные сообщения»,chat,must,yes,no,layout §5.3
-Реакции под пузырём,chat,must,yes,no,S08 C2-C7
-Контекстное меню сообщения с полосой реакций,chat,must,yes,no,S10 41 41a E1-E3
-Кнопка «вниз» с бейджем,chat,must,yes,no,S09 J1
-Поле ввода-капсула с авто-ростом,composer,must,yes,no,S11 B7 layout §5.4
-Ответ и редактирование в поле ввода,composer,must,yes,no,44a 44b
-Отправка по Enter и анимация отправки,composer,must,yes,no,B1-B4
-Панель эмодзи / стикеров / GIF,composer,must,yes,no,S13 46-49
-Меню вложений,composer,must,yes,no,S14 47
-Цвета Day / Day Classic / Night / Night Accent / System,theme,must,yes,no,tokens §1.1 110 ролей
-Шрифт Inter по шкале SF-метрик,theme,must,yes,no,tokens §3; SF не переносим
-Кривые и пружины macOS в anim::,animation,must,yes,no,animations.md примитивы
-Push/pop переходы правой части,animation,must,yes,no,A3-A5
-Корень настроек в стиле групп InputData,settings,must,yes,no,S16 measure/settings-group.png
-Строки настроек: кнопка / значение / тумблер / радио,settings,must,yes,no,S18-S28
-Alert в стиле Telegram-mac,dialogs,must,yes,no,S30 60 61
-Профиль канала/чата с табами медиа,profile,should,yes,no,S15 50-53
+Три стадии ширины левой колонки (полная / 90pt / single),window,must,yes,partial,layout §2; S01 70-72; status: Режимы tdesktop сохранены; точное соответствие 90pt не подтверждено
+Перетаскивание разделителя колонок с сохранением ширины,window,must,yes,yes,kLeftColumnWidth; source: tdesktop: сохранение ширины; patches/README.md
+Строка чата 70pt: аватар 50 / имя / превью / время / бейдж,chat list,must,yes,yes,tokens §4; S02; source: dialogs.style и dialogs_layout.cpp; patches/README.md
+Закреплённые чаты и архив-капсула,chat list,must,yes,yes,S02; source: dialogs_widget.cpp и dialogs_inner_widget.cpp; patches/README.md
+Бейджи непрочитанных (акцент / серый mute / @ / реакция),chat list,must,yes,yes,S02 S09; source: tdesktop native + палитра/раскладка форка; визуально не проверено
+Галочки прочтения и «вы:» и черновик в превью,chat list,must,yes,yes,S02; source: tdesktop native; логика превью сохранена
+Табы папок над списком,chat list,must,yes,yes,S02 H1-H2; source: chatsFiltersTabs; patches/README.md
+Таб-бар снизу (контакты / звонки / чаты / настройки),chat list,must,yes,yes,S02; source: dialogsMac tab bar; patches/README.md
+Поиск-капсула и глобальный поиск с секциями,search,must,yes,partial,S07 30-32; status: Поиск-капсула списка сделана; секции глобального поиска не сверены
+Контекстное меню чата,chat list,must,yes,yes,S03 behavior §2; source: общие Menu стили/анимация lib_ui.patch; содержимое tdesktop
+Шапка чата: имя / статус / поиск / меню,chat,must,yes,yes,layout §3; source: topBarNameStyle и высота 64; patches/README.md
+Пузыри in/out с радиусами по позиции в группе и хвостом,chat,must,yes,yes,"layout §5.2; C1; source: 16/8, хвост tdesktop; patches/README.md"
+Группировка сообщений по автору и времени,chat,must,yes,yes,layout §5.2; source: 600 секунд; patches/README.md
+Дата-пилюля и плашка «Непрочитанные сообщения»,chat,must,yes,partial,layout §5.3; status: Пилюли настроены; непрочитанная плашка не сверена целиком
+Реакции под пузырём,chat,must,yes,partial,S08 C2-C7; status: Реакции tdesktop; C2-C7 не перенесены целиком
+Контекстное меню сообщения с полосой реакций,chat,must,yes,partial,S10 41 41a E1-E3; status: Меню настроено; полоса реакций остаётся tdesktop
+Кнопка «вниз» с бейджем,chat,must,yes,yes,S09 J1; source: CornerButtons; patches/README.md
+Поле ввода-капсула с авто-ростом,composer,must,yes,yes,S11 B7 layout §5.4; source: HistoryWidget + ComposeControls; patches/README.md
+Ответ и редактирование в поле ввода,composer,must,yes,yes,44a 44b; source: HistoryWidget + FieldHeader; patches/README.md
+Отправка по Enter и анимация отправки,composer,must,yes,yes,B1-B4; source: native Enter + анимации форка; patches/README.md
+Панель эмодзи / стикеров / GIF,composer,must,yes,partial,S13 46-49; status: Панели tdesktop; оформление не доведено
+Меню вложений,composer,must,yes,partial,S14 47; status: Открытие по клику перенесено; содержимое и оформление меню не доведены
+Цвета Day / Day Classic / Night / Night Accent / System,theme,must,yes,partial,tokens §1.1 110 ролей; status: Палитры перенесены; автоматическая System-тема не проверена
+Шрифт Inter по шкале SF-метрик,theme,must,yes,yes,tokens §3; SF не переносим; source: Inter и веса lib_ui.patch; patches/README.md
+Кривые и пружины macOS в anim::,animation,must,yes,yes,animations.md примитивы; source: anim:: mac curves и springs; patches/README.md
+Push/pop переходы правой части,animation,must,yes,yes,A3-A5; source: Window::SlideAnimation; patches/README.md
+Корень настроек в стиле групп InputData,settings,must,yes,yes,S16 measure/settings-group.png; source: SettingsButton cardSkip/cardRadius; patches/README.md
+Строки настроек: кнопка / значение / тумблер / радио,settings,must,yes,partial,S18-S28; status: Карточки и переключатели сделаны; остальные типы строк не доведены
+Alert в стиле Telegram-mac,dialogs,must,yes,yes,S30 60 61; source: defaultBox/defaultBoxButton; patches/README.md
+Профиль канала/чата с табами медиа,profile,should,yes,partial,S15 50-53; status: Есть общий фон и шапка Info; профиль целиком не перенесён
 Режим выделения сообщений,chat,should,yes,no,S12 44c I1
 Плашки закрепа и перевода,chat,should,yes,no,S09 42
-Свайп-ответ,chat,should,yes,no,D1
-Боковая (trailing) панель стикеров/GIF,composer,should,yes,no,49a
-Запись голосового в поле ввода,composer,should,yes,no,L1-L4
+Свайп-ответ,chat,should,yes,partial,D1; status: Жест tdesktop; D1 не согласован с recon
+Боковая (trailing) панель стикеров/GIF,composer,should,yes,partial,49a; status: Боковая панель tdesktop; оформление не доведено
+Запись голосового в поле ввода,composer,should,yes,yes,L1-L4; source: VoiceRecordBar capsule; patches/README.md
 Индикатор печати,chat,should,yes,no,K1-K2
-Превью ссылок / файлов / медиа в пузыре,chat,should,yes,no,layout §5.5
-Модалки с анимацией открытия,dialogs,should,yes,no,G1-G5
-Hover-состояния строк настроек и кнопок,settings,should,yes,no,Q1
-Анимация тумблера,settings,should,yes,no,P1
+Превью ссылок / файлов / медиа в пузыре,chat,should,yes,partial,layout §5.5; status: Размеры и группировка пузырей перенесены; типы медиа не сверены
+Модалки с анимацией открытия,dialogs,should,yes,partial,G1-G5; status: Открытие LayerStack перенесено; морф G2/G3/G5 не доведён
+Hover-состояния строк настроек и кнопок,settings,should,yes,partial,Q1; status: Нативный hover сохранён; Q1 не доведён
+Анимация тумблера,settings,should,yes,yes,P1; source: ToggleView; patches/README.md
 Уведомления и звук,settings,should,yes,no,S19 21 29
-Конфиденциальность и подстраницы,settings,should,yes,no,S20 22-22c
-Данные и память / прокси,settings,should,yes,no,S21 23-23d
-Оформление: темы / акценты / обои / цвет имени,settings,should,yes,no,S22 24-24b
-Язык,settings,should,yes,no,S23 25
-Стикеры и эмодзи / быстрая реакция,settings,should,yes,no,S24 26-26b
-Папки и создание папки,settings,should,yes,no,S25 27 27a
-Сеансы,settings,should,yes,no,S27 2Aa
-Мой профиль и редактирование,settings,should,yes,no,S17 2Bi
+Конфиденциальность и подстраницы,settings,should,yes,partial,S20 22-22c; status: Общие карточки; подстраницы приватности отдельно не сверены
+Данные и память / прокси,settings,should,yes,partial,S21 23-23d; status: Общие карточки; данные/память/прокси отдельно не сверены
+Оформление: темы / акценты / обои / цвет имени,settings,should,yes,partial,S22 24-24b; status: Палитры перенесены; страницы оформления не доведены
+Язык,settings,should,yes,partial,S23 25; status: Общие карточки; страница языка отдельно не сверена
+Стикеры и эмодзи / быстрая реакция,settings,should,yes,partial,S24 26-26b; status: Карточки/тумблеры перенесены; панели и подстраницы не доведены
+Папки и создание папки,settings,should,yes,partial,S25 27 27a; status: Табы перенесены; создание/редактирование папок отдельно не доведено
+Сеансы,settings,should,yes,partial,S27 2Aa; status: Общие карточки; список сеансов отдельно не сверён
+Мой профиль и редактирование,settings,should,yes,partial,S17 2Bi; status: Общие Info стили; редактирование профиля отдельно не доведено
 Поиск в настройках,settings,should,yes,no,2Bg 2Bh
 Горячие клавиши macOS (⌘ → Ctrl),behavior,should,yes,no,behavior §1 hotkeys-raw.txt
 Смена темы с анимацией,theme,should,yes,no,N1

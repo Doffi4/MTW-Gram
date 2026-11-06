@@ -3036,10 +3036,203 @@ index 30024a8..9bf8c66 100644
  		updateMembersShowArea();
  		update();
 diff --git a/Telegram/SourceFiles/info/info.style b/Telegram/SourceFiles/info/info.style
-index aa58185..8daaa28 100644
+index aa58185..7096ee8 100644
 --- a/Telegram/SourceFiles/info/info.style
 +++ b/Telegram/SourceFiles/info/info.style
-@@ -602,11 +602,9 @@ infoBlockHeaderLabel: FlatLabel(infoProfileStatus) {
+@@ -116,18 +116,18 @@ infoLayerMediaSearch: SearchFieldRow(infoMediaSearch) {
+ 	fieldCancelSkip: 46px;
+ }
+ infoTopBarSearchRow: SearchFieldRow(infoLayerMediaSearch) {
+-	height: 52px;
+-	padding: margins(0px, 12px, 8px, 10px);
++	height: 64px;
++	padding: margins(0px, 18px, 8px, 16px);
+ 	fieldCancel: CrossButton(defaultMultiSelectSearchCancel) {
+ 		width: 51px;
+-		height: 52px;
++		height: 64px;
+ 		cross: CrossAnimation {
+ 			size: 42px;
+ 			skip: 14px;
+ 			stroke: 1.5;
+ 			minScale: 0.3;
+ 		}
+-		crossPosition: point(1px, 6px);
++		crossPosition: point(1px, 12px);
+ 	}
+ }
+ 
+@@ -135,7 +135,7 @@ infoSlideDuration: 0;
+ 
+ infoTopBarBackIcon: icon {{ "info/info_back", boxTitleCloseFg }};
+ infoTopBarBackIconOver: icon {{ "info/info_back", boxTitleCloseFgOver }};
+-infoTopBarHeight: 54px;
++infoTopBarHeight: 64px;
+ infoTopBarBack: IconButton(defaultIconButton) {
+ 	width: 60px;
+ 	height: infoTopBarHeight;
+@@ -144,7 +144,7 @@ infoTopBarBack: IconButton(defaultIconButton) {
+ 	iconOver: infoTopBarBackIconOver;
+ 	iconPosition: point(11px, -1px);
+ 
+-	rippleAreaPosition: point(6px, 6px);
++	rippleAreaPosition: point(6px, 11px);
+ 	rippleAreaSize: 42px;
+ 	ripple: defaultRippleAnimationBgOver;
+ }
+@@ -152,7 +152,7 @@ infoTopBarTitle: FlatLabel(defaultFlatLabel) {
+ 	textFg: windowBoldFg;
+ 	maxHeight: 20px;
+ 	style: TextStyle(defaultTextStyle) {
+-		font: font(14px semibold);
++		font: font(15px semibold);
+ 	}
+ }
+ infoTopBarMediaCancel: IconButton(infoTopBarBack) {
+@@ -163,7 +163,7 @@ infoTopBarMediaCancel: IconButton(infoTopBarBack) {
+ infoTopBarClose: IconButton(infoTopBarMediaCancel) {
+ 	width: 48px;
+ 	iconPosition: point(5px, -1px);
+-	rippleAreaPosition: point(0px, 6px);
++	rippleAreaPosition: point(0px, 11px);
+ }
+ infoTopBarSearch: IconButton(infoTopBarBack) {
+ 	width: 56px;
+@@ -175,7 +175,7 @@ infoTopBarMenu: IconButton(infoTopBarBack) {
+ 	icon: icon {{ "title_menu_dots", boxTitleCloseFg }};
+ 	iconOver: icon {{ "title_menu_dots", boxTitleCloseFgOver }};
+ 	iconPosition: point(18px, -1px);
+-	rippleAreaPosition: point(1px, 6px);
++	rippleAreaPosition: point(1px, 11px);
+ }
+ infoTopBarMenuActive: icon {{ "title_menu_dots", windowActiveTextFg, point(0px, 0px) }};
+ infoTopBarCall: IconButton(infoTopBarMenu) {
+@@ -183,14 +183,14 @@ infoTopBarCall: IconButton(infoTopBarMenu) {
+ 	icon: icon {{ "top_bar_call", boxTitleCloseFg }};
+ 	iconOver: icon {{ "top_bar_call", boxTitleCloseFgOver }};
+ 	iconPosition: point(5px, -1px);
+-	rippleAreaPosition: point(0px, 6px);
++	rippleAreaPosition: point(0px, 11px);
+ }
+ infoTopBarQr: IconButton(infoTopBarMenu) {
+ 	width: 48px;
+ 	icon: icon {{ "menu/qr_code", boxTitleCloseFg }};
+ 	iconOver: icon {{ "menu/qr_code", boxTitleCloseFgOver }};
+ 	iconPosition: point(8px, -1px);
+-	rippleAreaPosition: point(0px, 6px);
++	rippleAreaPosition: point(0px, 11px);
+ }
+ infoTopBarKeysLegend: IconButton(infoTopBarQr) {
+ 	icon: icon {{ "menu/faq", boxTitleCloseFg }};
+@@ -201,14 +201,14 @@ infoTopBarEdit: IconButton(infoTopBarMenu) {
+ 	icon: icon {{ "menu/edit", boxTitleCloseFg }};
+ 	iconOver: icon {{ "menu/edit", boxTitleCloseFgOver }};
+ 	iconPosition: point(8px, -1px);
+-	rippleAreaPosition: point(0px, 6px);
++	rippleAreaPosition: point(0px, 11px);
+ }
+ infoTopBarForward: IconButton(infoTopBarBack) {
+ 	width: 46px;
+ 	icon: icon {{ "info/info_media_forward", boxTitleCloseFg }};
+ 	iconOver: icon {{ "info/info_media_forward", boxTitleCloseFgOver }};
+ 	iconPosition: point(10px, -1px);
+-	rippleAreaPosition: point(1px, 6px);
++	rippleAreaPosition: point(1px, 11px);
+ }
+ infoTopBarDelete: IconButton(infoTopBarForward) {
+ 	icon: icon {{ "info/info_media_delete", boxTitleCloseFg }};
+@@ -234,16 +234,18 @@ infoTopBar: InfoTopBar {
+ 	height: infoTopBarHeight;
+ 	back: infoTopBarBack;
+ 	title: infoTopBarTitle;
+-	titlePosition: point(24px, 17px);
++	titlePosition: point(24px, 22px);
+ 	titleWithSubtitle: FlatLabel(infoTopBarTitle) {
+-		style: semiboldTextStyle;
+ 	}
+-	titleWithSubtitlePosition: point(16px, 8px);
++	titleWithSubtitlePosition: point(16px, 14px);
+ 	subtitle: FlatLabel(defaultFlatLabel) {
+ 		textFg: windowSubTextFg;
+ 		maxHeight: 20px;
++		style: TextStyle(defaultTextStyle) {
++			font: font(12px);
++		}
+ 	}
+-	subtitlePosition: point(16px, 28px);
++	subtitlePosition: point(16px, 34px);
+ 	badge: FlatLabel(defaultFlatLabel) {
+ 		textFg: windowSubTextFg;
+ 	}
+@@ -266,7 +268,7 @@ infoTopBarDuration: 150;
+ 
+ infoLayerTopMinimal: 20px;
+ infoLayerTopMaximal: 40px;
+-infoLayerTopBarHeight: 56px;
++infoLayerTopBarHeight: infoTopBarHeight;
+ infoLayerTopBarBackIcon: icon {{ "info/info_back", boxTitleCloseFg }};
+ infoLayerTopBarBackIconOver: icon {{ "info/info_back", boxTitleCloseFgOver }};
+ infoLayerTopBarBack: IconButton(infoTopBarBack) {
+@@ -277,7 +279,7 @@ infoLayerTopBarBack: IconButton(infoTopBarBack) {
+ 	icon: infoLayerTopBarBackIcon;
+ 	iconOver: infoLayerTopBarBackIconOver;
+ 	rippleAreaSize: 40px;
+-	rippleAreaPosition: point(6px, 8px);
++	rippleAreaPosition: point(6px, 12px);
+ }
+ infoLayerTopBarMediaCancel: IconButton(infoLayerTopBarBack) {
+ 	width: 48px;
+@@ -286,7 +288,7 @@ infoLayerTopBarMediaCancel: IconButton(infoLayerTopBarBack) {
+ }
+ infoLayerTopBarClose: IconButton(infoLayerTopBarMediaCancel) {
+ 	iconPosition: point(4px, -1px);
+-	rippleAreaPosition: point(0px, 8px);
++	rippleAreaPosition: point(0px, 12px);
+ }
+ infoLayerTopBarMenu: IconButton(infoLayerTopBarClose) {
+ 	width: 40px;
+@@ -323,14 +325,14 @@ infoLayerTopBarEdit: IconButton(infoLayerTopBarClose) {
+ 	iconPosition: point(10px, -1px);
+ 
+ 	rippleAreaSize: 42px;
+-	rippleAreaPosition: point(1px, 6px);
++	rippleAreaPosition: point(1px, 10px);
+ }
+ infoLayerTopBarForward: IconButton(infoLayerTopBarBack) {
+ 	width: 45px;
+ 	icon: icon {{ "info/info_media_forward", boxTitleCloseFg }};
+ 	iconOver: icon {{ "info/info_media_forward", boxTitleCloseFgOver }};
+ 	iconPosition: point(11px, -1px);
+-	rippleAreaPosition: point(3px, 8px);
++	rippleAreaPosition: point(3px, 12px);
+ }
+ infoLayerTopBarDelete: IconButton(infoLayerTopBarForward) {
+ 	icon: icon {{ "info/info_media_delete", boxTitleCloseFg }};
+@@ -355,10 +357,10 @@ infoLayerTopBarUnpinStories: IconButton(infoLayerTopBarForward) {
+ infoLayerTopBar: InfoTopBar(infoTopBar) {
+ 	height: infoLayerTopBarHeight;
+ 	back: infoLayerTopBarBack;
+-	title: boxTitle;
+-	titlePosition: point(24px, 17px);
+-	titleWithSubtitlePosition: point(16px, 9px);
+-	subtitlePosition: point(16px, 30px);
++	title: infoTopBarTitle;
++	titlePosition: point(24px, 22px);
++	titleWithSubtitlePosition: point(16px, 14px);
++	subtitlePosition: point(16px, 34px);
+ 	bg: boxBg;
+ 	mediaCancel: infoLayerTopBarMediaCancel;
+ 	mediaActionsSkip: 6px;
+@@ -373,7 +375,7 @@ infoLayerTopBar: InfoTopBar(infoTopBar) {
+ 	radius: boxRadius;
+ }
+ 
+-infoLayerTopBarMenuPosition: point(48px, 37px);
++infoLayerTopBarMenuPosition: point(48px, 45px);
+ 
+ 
+ infoProfileTopBarHeightMax: 180px + infoLayerTopBarHeight;
+@@ -602,11 +604,9 @@ infoBlockHeaderLabel: FlatLabel(infoProfileStatus) {
  }
  infoBlockHeaderPosition: point(79px, 17px);
  
@@ -3052,7 +3245,7 @@ index aa58185..8daaa28 100644
  }
  infoProfileButton: SettingsButton(defaultSettingsButton) {
  	style: defaultTextStyle;
-@@ -916,11 +914,19 @@ editPeerUsernameFieldMargins: margins(22px, 0px, 22px, 0px);
+@@ -916,11 +916,19 @@ editPeerUsernameFieldMargins: margins(22px, 0px, 22px, 0px);
  historyTopBarBack: IconButton(infoTopBarBack) {
  	width: 52px;
  }
