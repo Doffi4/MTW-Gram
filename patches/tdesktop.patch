@@ -1698,10 +1698,43 @@ index 6c500a4..821d680 100644
  	Painter &p,
  	const BasicRow &row,
 diff --git a/Telegram/SourceFiles/history/history_inner_widget.cpp b/Telegram/SourceFiles/history/history_inner_widget.cpp
-index 40897a8..9bd8318 100644
+index 40897a8..9eb0ef0 100644
 --- a/Telegram/SourceFiles/history/history_inner_widget.cpp
 +++ b/Telegram/SourceFiles/history/history_inner_widget.cpp
-@@ -1668,6 +1668,8 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
+@@ -1471,7 +1471,7 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
+ 	_translateTracker->startBunch();
+ 	const auto metricsStale = base::take(_readMetricsStale);
+ 	if (metricsStale) {
+-		_readMetricsTracker->startBatch(_visibleAreaTop, _visibleAreaBottom);
++		_readMetricsTracker->startBatch(_visibleAreaTop, visibleContentBottom());
+ 	}
+ 	auto readTill = (HistoryItem*)nullptr;
+ 	auto readContents = base::flat_set<not_null<HistoryItem*>>();
+@@ -1512,7 +1512,9 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
+ 			int height) {
+ 		_translateTracker->add(view);
+ 		const auto item = view->data();
+-		if (metricsStale && height > 0) {
++		if (metricsStale && height > 0
++			&& top < visibleContentBottom()
++			&& top + height > _visibleAreaTop) {
+ 			_readMetricsTracker->push(item, top, height);
+ 		}
+ 		const auto isSponsored = item->isSponsored();
+@@ -1521,10 +1523,10 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
+ 			&& (item->history() == _history);
+ 		const auto withReaction = item->hasUnreadReaction();
+ 		const auto yShown = [&](int y) {
+-			return (_visibleAreaBottom >= y && _visibleAreaTop <= y);
++			return (visibleContentBottom() >= y && _visibleAreaTop <= y);
+ 		};
+ 		const auto markShown = isSponsored
+-			? view->markSponsoredViewed(_visibleAreaBottom - top)
++			? view->markSponsoredViewed(visibleContentBottom() - top)
+ 			: withReaction
+ 			? yShown(top + context.reactionInfo->position.y())
+ 			: isUnread
+@@ -1668,6 +1670,8 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
  		context.translate(0, -top);
  		p.translate(0, top);
  		const auto &sendingAnimation = _controller->sendingAnimation();
@@ -1710,7 +1743,7 @@ index 40897a8..9bd8318 100644
  		while (top < drawToY) {
  			while (nextGapIndex < int(collapseGaps().size())) {
  				const auto &gap = collapseGaps()[nextGapIndex];
-@@ -1695,7 +1697,14 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
+@@ -1695,7 +1699,14 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
  				context.fullMessageSelected = selection.fullMessageSelected;
  				context.messageSelection = selection.messageSelection;
  				context.highlight = _widget->itemHighlight(item);
@@ -1725,8 +1758,97 @@ index 40897a8..9bd8318 100644
  				processPainted(view, top, height);
  			}
  			top += height;
+@@ -4454,6 +4465,11 @@ void HistoryInner::keyPressEvent(QKeyEvent *e) {
+ 	}
+ }
+ 
++int HistoryInner::visibleContentBottom() const {
++	// Painting extends behind the composer; read receipts must not.
++	return std::max(_visibleAreaTop, _visibleAreaBottom - _bottomOverlap);
++}
++
+ void HistoryInner::markReadMetricsStale() {
+ 	_readMetricsStale = true;
+ 	update();
+@@ -4469,7 +4485,7 @@ void HistoryInner::checkActivation() {
+ 	if (!_widget->markingMessagesRead()) {
+ 		return;
+ 	}
+-	adjustCurrent(_visibleAreaBottom);
++	adjustCurrent(visibleContentBottom());
+ 	if (_history->loadedAtBottom() && _visibleAreaBottom >= height()) {
+ 		// Clear possible message notifications.
+ 		// Side-effect: Also clears all notifications from forum topics.
+@@ -4482,7 +4498,7 @@ void HistoryInner::checkActivation() {
+ 	auto view = block->messages[_curItem].get();
+ 	while (_curBlock > 0 || _curItem > 0) {
+ 		const auto bottom = itemTop(view) + view->height();
+-		if (_visibleAreaBottom >= bottom) {
++		if (visibleContentBottom() >= bottom) {
+ 			break;
+ 		}
+ 		if (_curItem > 0) {
+@@ -4498,7 +4514,9 @@ void HistoryInner::checkActivation() {
+ 			}
+ 		}
+ 	}
+-	session().data().histories().readInboxTill(view->data());
++	if (itemTop(view) < visibleContentBottom()) {
++		session().data().histories().readInboxTill(view->data());
++	}
+ }
+ 
+ void HistoryInner::recountHistoryGeometry(bool initial) {
+@@ -4798,6 +4816,10 @@ void HistoryInner::changeItemsRevealHeight(int revealHeight) {
+ 	updateSize();
+ }
+ 
++bool HistoryInner::setBottomOverlap(int overlap) {
++	return (std::exchange(_bottomOverlap, overlap) != overlap);
++}
++
+ void HistoryInner::updateSize() {
+ 	if (_thanosController) {
+ 		_thanosController->flushRemovals(historyHeight() - _revealHeight);
+@@ -4814,6 +4836,7 @@ void HistoryInner::updateSize() {
+ 	if (aboutBelowHistory) {
+ 		accumulate_max(newHistoryMarginBottom, _aboutView->height);
+ 	}
++	newHistoryMarginBottom += _bottomOverlap;
+ 	auto newHistoryMarginTop = std::max(
+ 		visibleHeight - itemsHeight - newHistoryMarginBottom,
+ 		0);
+diff --git a/Telegram/SourceFiles/history/history_inner_widget.h b/Telegram/SourceFiles/history/history_inner_widget.h
+index 098a915..e4acd2f 100644
+--- a/Telegram/SourceFiles/history/history_inner_widget.h
++++ b/Telegram/SourceFiles/history/history_inner_widget.h
+@@ -172,6 +172,8 @@ public:
+ 	void checkActivation();
+ 	void recountHistoryGeometry(bool initial = false);
+ 	void updateSize();
++	// Returns true if changed, the caller relayouts the list then.
++	bool setBottomOverlap(int overlap);
+ 	void setShownPinned(HistoryItem *item);
+ 
+ 	void repaintItem(const HistoryItem *item);
+@@ -329,6 +331,7 @@ private:
+ 
+ 	void onTouchSelect();
+ 	void onTouchScrollTimer();
++	[[nodiscard]] int visibleContentBottom() const;
+ 	void markReadMetricsStale();
+ 	void registerReadMetricsActivity();
+ 
+@@ -595,6 +598,7 @@ private:
+ 	int _historyMarginTop = 0;
+ 	int _historyMarginBottom = 0;
+ 	int _revealHeight = 0;
++	int _bottomOverlap = 0;
+ 	int _forumThreadBarWidth = 0;
+ 	Ui::PeerUserpicView _forumThreadBarUserpicView;
+ 
 diff --git a/Telegram/SourceFiles/history/history_widget.cpp b/Telegram/SourceFiles/history/history_widget.cpp
-index 562437c..3ad63c0 100644
+index 562437c..b5175e6 100644
 --- a/Telegram/SourceFiles/history/history_widget.cpp
 +++ b/Telegram/SourceFiles/history/history_widget.cpp
 @@ -236,6 +236,7 @@ constexpr auto kDisplayEditTimeWarningMs = 300 * 1000;
@@ -1745,7 +1867,86 @@ index 562437c..3ad63c0 100644
  
  	setupFastButtonMode();
  	initAiButton();
-@@ -6603,10 +6605,11 @@ void HistoryWidget::mouseMoveEvent(QMouseEvent *e) {
+@@ -1124,7 +1126,7 @@ HistoryWidget::HistoryWidget(
+ 			if (top >= 0) {
+ 				auto scrollTop = _scroll->scrollTop();
+ 				if (top + view->height() > scrollTop
+-					&& top < scrollTop + _scroll->height()) {
++					&& top < scrollTop + _scroll->height() - _composeOverlap) {
+ 					*query.isVisible = true;
+ 				}
+ 			}
+@@ -1227,6 +1229,24 @@ HistoryWidget::HistoryWidget(
+ 
+ 	setupScheduledToggle();
+ 	setupSendAsToggle();
++	_composeBg.create(this);
++	_composeBg->setMouseTracking(true); // Moves and clicks go up to us.
++	_composeBg->paintRequest() | rpl::on_next([=](QRect clip) {
++		Painter p(_composeBg.data());
++		p.translate(-_composeBg->pos());
++		drawField(p, clip.translated(_composeBg->pos()));
++	}, _composeBg->lifetime());
++	{
++		const auto &list = children();
++		const auto from = list.indexOf(_scroll.data()) + 1;
++		for (auto i = from; i < list.size(); ++i) {
++			const auto widget = qobject_cast<QWidget*>(list[i]);
++			if (widget && widget != _composeBg.data()) {
++				_composeBg->stackUnder(widget);
++				break;
++			}
++		}
++	}
+ 	orderWidgets();
+ 	setupComposeStash();
+ 	setupShortcuts();
+@@ -1451,6 +1471,7 @@ void HistoryWidget::initVoiceRecordBar() {
+ 	_voiceRecordBar->recordingStateChanges(
+ 	) | rpl::on_next([=](bool active) {
+ 		_field->setDisabled(active);
++		updateField();
+ 		controller()->widget()->setInnerFocus();
+ 		updateAiButtonVisibility();
+ 		updateSendAsFileVisibility();
+@@ -2190,6 +2211,7 @@ void HistoryWidget::applyInlineBotQuery(UserData *bot, const QString &query) {
+ }
+ 
+ void HistoryWidget::orderWidgets() {
++	_fieldBarCancel->raise();
+ 	_voiceRecordBar->raise();
+ 	_send->raise();
+ 	_aiButton->raise();
+@@ -3714,8 +3736,6 @@ void HistoryWidget::setHistory(History *history) {
+ 	if (was && !now) {
+ 		_attachToggle->removeEventFilter(_attachBotsMenu.get());
+ 		_attachBotsMenu->hideFast();
+-	} else if (now && !was && !ChatHelpers::ShowPanelOnClick()) {
+-		_attachToggle->installEventFilter(_attachBotsMenu.get());
+ 	}
+ 
+ 	const auto unloadHeavyViewParts = [](History *history) {
+@@ -3818,9 +3838,7 @@ void HistoryWidget::refreshAttachBotsMenu() {
+ 	}
+ 	_attachBotsMenu->setOrigin(
+ 		Ui::PanelAnimation::Origin::BottomLeft);
+-	if (!ChatHelpers::ShowPanelOnClick()) {
+-		_attachToggle->installEventFilter(_attachBotsMenu.get());
+-	}
++	// macOS ChatInputMenuView: the attach menu opens on click only.
+ 	_attachBotsMenu->heightValue(
+ 	) | rpl::on_next([=] {
+ 		moveFieldControls();
+@@ -4727,7 +4745,7 @@ void HistoryWidget::maybeMarkReactionsRead(not_null<HistoryItem*> item) {
+ 	const auto reactionCenter
+ 		= view->reactionButtonParameters({}, {}).center.y();
+ 	const auto visibleTop = _scroll->scrollTop();
+-	const auto visibleBottom = visibleTop + _scroll->height();
++	const auto visibleBottom = visibleTop + _scroll->height() - _composeOverlap;
+ 	if (itemTop + reactionCenter < visibleTop
+ 		|| itemTop + view->height() > visibleBottom) {
+ 		return;
+@@ -6603,10 +6621,11 @@ void HistoryWidget::mouseMoveEvent(QMouseEvent *e) {
  
  void HistoryWidget::updateOverStates(QPoint pos) {
  	const auto isReadyToForward = readyToForward();
@@ -1759,7 +1960,7 @@ index 562437c..3ad63c0 100644
  		st::historyReplyHeight);
  	const auto hasWebPage = !!_previewDrawPreview;
  	const auto inDetails = detailsRect.contains(pos)
-@@ -7638,7 +7641,7 @@ void HistoryWidget::moveFieldControls() {
+@@ -7638,7 +7657,7 @@ void HistoryWidget::moveFieldControls() {
  // (_botStart|_unblock|_joinChannel|_muteUnmute|_reportMessages)
  
  	auto buttonsBottom = bottom - _attachToggle->height();
@@ -1768,7 +1969,7 @@ index 562437c..3ad63c0 100644
  	if (_botMenu) {
  		const auto skip = st::historyBotMenuSkip;
  		_botMenu->moveToLeft(left + skip, buttonsBottom + skip);
-@@ -7653,6 +7656,7 @@ void HistoryWidget::moveFieldControls() {
+@@ -7653,6 +7672,7 @@ void HistoryWidget::moveFieldControls() {
  		_sendAs->moveToLeft(left, buttonsBottom);
  		left += _sendAs->width();
  	}
@@ -1776,7 +1977,7 @@ index 562437c..3ad63c0 100644
  	const auto fieldTop = bottom - fieldHeight() - st::historySendPadding;
  	_field->moveToLeft(left, fieldTop);
  	_richDraftPreview->moveToLeft(left, fieldTop);
-@@ -7661,8 +7665,9 @@ void HistoryWidget::moveFieldControls() {
+@@ -7661,8 +7681,9 @@ void HistoryWidget::moveFieldControls() {
  			left,
  			bottom - fieldHeight() - st::historySendPadding);
  	}
@@ -1788,7 +1989,7 @@ index 562437c..3ad63c0 100644
  	_voiceRecordBar->moveToLeft(0, bottom - _voiceRecordBar->height());
  	_tabbedSelectorToggle->moveToRight(right, buttonsBottom);
  	_botKeyboardHide->moveToRight(right, buttonsBottom);
-@@ -7696,8 +7701,8 @@ void HistoryWidget::moveFieldControls() {
+@@ -7696,8 +7717,8 @@ void HistoryWidget::moveFieldControls() {
  	updateExpandButtonGeometry();
  	updateDiscardRichDraftGeometry();
  
@@ -1799,7 +2000,15 @@ index 562437c..3ad63c0 100644
  		_field->y() - st::historySendPadding - _fieldBarCancel->height());
  	if (_inlineResults) {
  		_inlineResults->moveBottom(_field->y() - st::historySendPadding);
-@@ -7731,6 +7736,8 @@ void HistoryWidget::updateFieldSize() {
+@@ -7724,6 +7745,7 @@ void HistoryWidget::moveFieldControls() {
+ 	if (_sendRestriction) {
+ 		_sendRestriction->setGeometry(fullWidthButtonRect);
+ 	}
++	updateComposeBg();
+ }
+ 
+ void HistoryWidget::updateFieldSize() {
+@@ -7731,6 +7753,8 @@ void HistoryWidget::updateFieldSize() {
  	auto fieldWidth = width()
  		- _attachToggle->width()
  		- st::historySendRight
@@ -1808,7 +2017,7 @@ index 562437c..3ad63c0 100644
  		- _send->width()
  		- _tabbedSelectorToggle->width();
  	if (_botMenu) {
-@@ -8430,7 +8437,7 @@ void HistoryWidget::updateControlsGeometry() {
+@@ -8430,7 +8454,7 @@ void HistoryWidget::updateControlsGeometry() {
  		topShadowLeft,
  		_topBar->bottomNoMargins(),
  		width - topShadowLeft - topShadowRight,
@@ -1817,7 +2026,55 @@ index 562437c..3ad63c0 100644
  }
  
  void HistoryWidget::itemRemoved(not_null<const HistoryItem*> item) {
-@@ -8955,7 +8962,7 @@ void HistoryWidget::startItemRevealAnimations() {
+@@ -8704,13 +8728,26 @@ void HistoryWidget::updateHistoryGeometry(
+ 			newScrollHeight -= _kbScroll->height();
+ 		}
+ 	}
++	// macOS ChatInputView floats: the history scrolls under the capsule.
++	_composeOverlap = fieldBackShown()
++		? (height() - fieldBackRect().y())
++		: 0;
++	if (_kbShown
++		|| isChoosingTheme()
++		|| (!_canSendMessages && !editingMessage())) {
++		_composeOverlap = 0;
++	}
++	newScrollHeight += _composeOverlap;
++	const auto overlapChanged = _list
++		&& _list->setBottomOverlap(_composeOverlap);
+ 	if (newScrollHeight <= 0) {
+ 		return;
+ 	}
+ 	const auto wasScrollTop = _scroll->scrollTop();
+ 	const auto wasAtBottom = (wasScrollTop >= _scroll->scrollTopMax());
+ 	const auto needResize = (_scroll->width() != newScrollWidth)
+-		|| (_scroll->height() != newScrollHeight);
++		|| (_scroll->height() != newScrollHeight)
++		|| overlapChanged;
+ 	if (needResize) {
+ 		_scroll->resize(newScrollWidth, newScrollHeight);
+ 		// on initial updateListSize we didn't put the _scroll->scrollTop
+@@ -8721,13 +8758,17 @@ void HistoryWidget::updateHistoryGeometry(
+ 		}
+ 	}
+ 	if (needResize || initial) {
++		const auto visible = _scroll->geometry().marginsRemoved(
++			{ 0, 0, 0, _composeOverlap });
+ 		if (_autocomplete) {
+-			_autocomplete->setBoundings(_scroll->geometry());
++			_autocomplete->setBoundings(visible);
+ 		}
+ 		if (_supportAutocomplete) {
+-			_supportAutocomplete->setBoundings(_scroll->geometry());
++			_supportAutocomplete->setBoundings(visible);
+ 		}
++		_cornerButtons.setBottomSkip(_composeOverlap);
+ 		_cornerButtons.updatePositions();
++		updateComposeBg();
+ 		controller()->floatPlayerAreaUpdated();
+ 	}
+ 	if (_subsectionTabs) {
+@@ -8955,7 +8996,7 @@ void HistoryWidget::startItemRevealAnimations() {
  							0.,
  							1.,
  							reveal ? reveal->duration : st::itemRevealDuration,
@@ -1826,13 +2083,77 @@ index 562437c..3ad63c0 100644
  						if (item->out() || _history->peer->isSelf()) {
  							_list->theme()->rotateComplexGradientBackground();
  						}
-@@ -11474,7 +11481,36 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+@@ -11452,8 +11493,60 @@ void HistoryWidget::updateField() {
+ 		return;
+ 	}
+ 	_repaintFieldScheduled = true;
+-	const auto fieldAreaTop = _scroll->y() + _scroll->height();
+-	rtlupdate(0, fieldAreaTop, width(), height() - fieldAreaTop);
++	_composeBg->update();
++}
++
++bool HistoryWidget::fieldBackShown() const {
++	if (!_list || isSearching()) {
++		return false;
++	}
++	return fieldOrDisabledShown()
++		|| isRecording()
++		|| replyTo()
++		|| readyToForward()
++		|| _kbShown
++		|| _suggestOptions;
++}
++
++QRect HistoryWidget::fieldBackRect() const {
++	auto backy = _field->y() - st::historySendPadding;
++	auto backh = fieldHeight() + 2 * st::historySendPadding;
++	if (_editMsgId
++		|| _replyTo
++		|| readyToForward()
++		|| _kbReplyTo
++		|| _previewDrawPreview
++		|| _suggestOptions) {
++		backy -= st::historyReplyHeight;
++		backh += st::historyReplyHeight;
++	}
++	const auto box = composeBoxRect();
++	return QRect(box.x(), backy, box.width(), backh);
++}
++
++void HistoryWidget::updateComposeBg() {
++	if (!_composeBg) {
++		return;
++	}
++	const auto shown = fieldBackShown();
++	_composeBg->setVisible(shown);
++	if (!shown) {
++		return;
++	}
++	const auto back = fieldBackRect();
++	_composeBg->setGeometry(0, back.y(), width(), height() - back.y());
++	// Clicks between the capsule and the round buttons reach the history.
++	const auto skip = st::historyComposeCapsuleMargin;
++	auto mask = QRegion(back.marginsRemoved({ skip, skip / 2, skip, skip / 2 }));
++	for (const auto button : {
++			static_cast<QWidget*>(_attachToggle.data()),
++			static_cast<QWidget*>(_send.get()) }) {
++		if (!button->isHidden()) {
++			mask += button->geometry();
++		}
++	}
++	_composeBg->setMask(mask.translated(0, -back.y()));
++	_composeBg->update();
+ }
+ 
+ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+@@ -11474,7 +11567,37 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
  	}
  	p.setInactive(
  		controller()->isGifPausedAtLeastFor(Window::GifPauseReason::Any));
 -	p.fillRect(myrtlrect(0, backy, width(), backh), st::historyReplyBg);
 +	const auto box = composeBoxRect();
-+	{
++	// While recording the record bar draws its own capsule over the field.
++	if (!isRecording() || backh > fieldHeight() + 2 * st::historySendPadding) {
 +		const auto skip = st::historyComposeCapsuleMargin;
 +		const auto radius = st::historyComposeCapsuleRadius;
 +		const auto half = st::lineWidth / 2.;
@@ -1864,7 +2185,7 @@ index 562437c..3ad63c0 100644
  
  	const auto media = (!_previewDrawPreview && drawMsgText)
  		? drawMsgText->media()
-@@ -11514,7 +11550,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+@@ -11514,7 +11637,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
  		st::historyLinkIcon.paint(
  			p,
  			st::historyReplyIconPosition + QPoint(0, backy),
@@ -1873,7 +2194,7 @@ index 562437c..3ad63c0 100644
  		const auto textTop = backy + st::msgReplyPadding.top();
  		auto previewLeft = st::historyReplySkip;
  
-@@ -11527,7 +11563,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+@@ -11527,7 +11650,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
  			previewLeft += st::historyReplyPreview + st::msgReplyBarSkip;
  		}
  		p.setPen(st::historyReplyNameFg);
@@ -1882,7 +2203,7 @@ index 562437c..3ad63c0 100644
  			- previewLeft
  			- _fieldBarCancel->width()
  			- st::msgReplyPadding.right();
-@@ -11549,7 +11585,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+@@ -11549,7 +11672,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
  		const auto pausedSpoiler = paused || On(PowerSaving::kChatSpoiler);
  		auto replyLeft = st::historyReplySkip;
  		if (_suggestOptions) {
@@ -1891,7 +2212,7 @@ index 562437c..3ad63c0 100644
  		} else {
  			const auto quoted = _replyTo
  				&& !HistoryView::Reply::ComposePreviewQuote(_replyTo).empty();
-@@ -11560,7 +11596,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+@@ -11560,7 +11683,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
  				: st::historyReplyIcon).paint(
  					p,
  					st::historyReplyIconPosition + QPoint(0, backy),
@@ -1900,7 +2221,7 @@ index 562437c..3ad63c0 100644
  		}
  		if (drawMsgText) {
  			if (hasPreview) {
-@@ -11601,17 +11637,17 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+@@ -11601,17 +11724,17 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
  				replyLeft += st::historyReplyPreview + st::msgReplyBarSkip;
  			}
  			if (_suggestOptions) {
@@ -1921,7 +2242,7 @@ index 562437c..3ad63c0 100644
  							- replyLeft
  							- _fieldBarCancel->width()
  							- st::msgReplyPadding.right());
-@@ -11623,7 +11659,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+@@ -11623,7 +11746,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
  						st::msgReplyPadding.top()
  							+ st::msgServiceNameFont->height
  							+ backy),
@@ -1930,7 +2251,7 @@ index 562437c..3ad63c0 100644
  						- replyLeft
  						- _fieldBarCancel->width()
  						- st::msgReplyPadding.right(),
-@@ -11645,7 +11681,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+@@ -11645,7 +11768,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
  					+ st::msgDateFont->ascent,
  				st::msgDateFont->elided(
  					tr::lng_profile_loading(tr::now),
@@ -1939,7 +2260,7 @@ index 562437c..3ad63c0 100644
  						- replyLeft
  						- _fieldBarCancel->width()
  						- st::msgReplyPadding.right()));
-@@ -11653,16 +11689,26 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+@@ -11653,16 +11776,26 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
  	} else if (hasForward) {
  		st::historyForwardIcon.paint(
  			p,
@@ -1970,20 +2291,52 @@ index 562437c..3ad63c0 100644
  }
  
  void HistoryWidget::paintEditHeader(
+@@ -11758,17 +11891,7 @@ void HistoryWidget::paintEvent(QPaintEvent *e) {
+ 	Painter p(this);
+ 	const auto clip = e->rect();
+ 	if (_list) {
+-		const auto restrictionHidden = fieldOrDisabledShown()
+-			|| isRecording();
+-		if (restrictionHidden
+-			|| replyTo()
+-			|| readyToForward()
+-			|| _kbShown
+-			|| _suggestOptions) {
+-			if (!isSearching()) {
+-				drawField(p, clip);
+-			}
+-		}
++		// The compose capsule is painted by _composeBg over the history.
+ 	} else {
+ 		const auto w = 0
+ 			+ st::msgServiceFont->width(tr::lng_willbe_history(tr::now))
 diff --git a/Telegram/SourceFiles/history/history_widget.h b/Telegram/SourceFiles/history/history_widget.h
-index 6369a0f..a7fc512 100644
+index 6369a0f..be725ed 100644
 --- a/Telegram/SourceFiles/history/history_widget.h
 +++ b/Telegram/SourceFiles/history/history_widget.h
-@@ -658,6 +658,7 @@ private:
+@@ -658,6 +658,10 @@ private:
  	void sendInlineResult(InlineBots::ResultSelected result);
  
  	void drawField(Painter &p, const QRect &rect);
++	[[nodiscard]] bool fieldBackShown() const;
++	[[nodiscard]] QRect fieldBackRect() const;
++	void updateComposeBg();
 +	[[nodiscard]] QRect composeBoxRect() const;
  	void paintEditHeader(
  		Painter &p,
  		const QRect &rect,
+@@ -886,6 +890,9 @@ private:
+ 
+ 	object_ptr<HistoryView::TopBarWidget> _topBar;
+ 	object_ptr<Ui::ElasticScroll> _scroll;
++	// macOS floating compose capsule, painted over the history under it.
++	object_ptr<Ui::RpWidget> _composeBg = { nullptr };
++	int _composeOverlap = 0;
+ 	QPointer<HistoryInner> _list;
+ 	base::weak_ptr<ListRevealHold> _listRevealHold;
+ 	History *_migrated = nullptr;
 diff --git a/Telegram/SourceFiles/history/view/controls/history_view_compose_controls.cpp b/Telegram/SourceFiles/history/view/controls/history_view_compose_controls.cpp
-index aaa4ae0..77adb8a 100644
+index aaa4ae0..9fb6207 100644
 --- a/Telegram/SourceFiles/history/view/controls/history_view_compose_controls.cpp
 +++ b/Telegram/SourceFiles/history/view/controls/history_view_compose_controls.cpp
 @@ -395,7 +395,7 @@ void FieldHeader::init() {
@@ -1995,7 +2348,18 @@ index aaa4ae0..77adb8a 100644
  
  		const auto position = st::historyReplyIconPosition;
  		if (_suggestOptions) {
-@@ -2891,7 +2891,7 @@ void ComposeControls::init() {
+@@ -2442,6 +2442,10 @@ void ComposeControls::showFinished() {
+ }
+ 
+ void ComposeControls::raisePanels() {
++	_wrap->raise();
++	if (_writeRestricted) {
++		_writeRestricted->raise();
++	}
+ 	if (_autocomplete) {
+ 		_autocomplete->raise();
+ 	}
+@@ -2891,7 +2895,7 @@ void ComposeControls::init() {
  	_wrap->paintRequest(
  	) | rpl::on_next([=](QRect clip) {
  		auto p = QPainter(_wrap.get());
@@ -2004,7 +2368,7 @@ index aaa4ae0..77adb8a 100644
  	}, _wrap->lifetime());
  
  
-@@ -3271,6 +3271,9 @@ void ComposeControls::initField() {
+@@ -3271,6 +3275,9 @@ void ComposeControls::initField() {
  		return false;
  	});
  	InitMessageFieldFade(_field, _st.field.textBg);
@@ -2014,7 +2378,15 @@ index aaa4ae0..77adb8a 100644
  	_field->setEditLinkCallback(
  		DefaultEditLinkCallback(_show, _field, &_st.boxField));
  	_field->setEditLanguageCallback(DefaultEditLanguageCallback(_show));
-@@ -5047,6 +5050,7 @@ void ComposeControls::updateControlsGeometry(QSize size) {
+@@ -4446,6 +4453,7 @@ void ComposeControls::changeFocusedControl() {
+ void ComposeControls::initVoiceRecordBar() {
+ 	_voiceRecordBar->recordingStateChanges(
+ 	) | rpl::on_next([=](bool active) {
++		_wrap->update();
+ 		if (active) {
+ 			_recording = true;
+ 			changeFocusedControl();
+@@ -5047,6 +5055,7 @@ void ComposeControls::updateControlsGeometry(QSize size) {
  		- (_attachToggle ? _attachToggle->width() : 0)
  		- (_sendAs ? _sendAs->width() : 0)
  		- _st.padding.right()
@@ -2022,7 +2394,7 @@ index aaa4ae0..77adb8a 100644
  		- _send->width()
  		- (_editStars ? _editStars->width() : 0)
  		- (_tabbedSelectorToggle->isHidden()
-@@ -5108,6 +5112,7 @@ void ComposeControls::updateControlsGeometry(QSize size) {
+@@ -5108,6 +5117,7 @@ void ComposeControls::updateControlsGeometry(QSize size) {
  		_sendAs->moveToLeft(left, buttonsTop);
  		left += _sendAs->width();
  	}
@@ -2030,7 +2402,7 @@ index aaa4ae0..77adb8a 100644
  	const auto fieldHeight = composeFieldHeight();
  	const auto fieldTop = size.height() - _st.padding.bottom() - fieldHeight;
  	_field->moveToLeft(left, fieldTop);
-@@ -5119,11 +5124,6 @@ void ComposeControls::updateControlsGeometry(QSize size) {
+@@ -5119,11 +5129,6 @@ void ComposeControls::updateControlsGeometry(QSize size) {
  		_fieldDisabled->moveToLeft(left, fieldTop);
  	}
  
@@ -2042,7 +2414,7 @@ index aaa4ae0..77adb8a 100644
  	auto right = 0;
  	if (_starsReaction) {
  		_starsReaction->moveToRight(right, buttonsTop);
-@@ -5131,7 +5131,7 @@ void ComposeControls::updateControlsGeometry(QSize size) {
+@@ -5131,7 +5136,7 @@ void ComposeControls::updateControlsGeometry(QSize size) {
  	}
  	right += _st.padding.right();
  	_send->moveToRight(right, buttonsTop);
@@ -2051,7 +2423,7 @@ index aaa4ae0..77adb8a 100644
  	if (_editStars) {
  		_editStars->moveToRight(right, buttonsTop);
  		right += _editStars->width();
-@@ -5195,6 +5195,12 @@ void ComposeControls::updateControlsGeometry(QSize size) {
+@@ -5195,6 +5200,12 @@ void ComposeControls::updateControlsGeometry(QSize size) {
  	updateExpandButtonGeometry();
  	updateDiscardRichDraftGeometry();
  
@@ -2064,7 +2436,17 @@ index aaa4ae0..77adb8a 100644
  	_voiceRecordBar->resizeToWidth(size.width());
  	_voiceRecordBar->moveToLeft(
  		0,
-@@ -5730,19 +5736,55 @@ void ComposeControls::updateAttachBotsMenu() {
+@@ -5721,28 +5732,66 @@ void ComposeControls::updateAttachBotsMenu() {
+ 	}
+ 	_attachBotsMenu->setOrigin(
+ 		Ui::PanelAnimation::Origin::BottomLeft);
+-	if (!ChatHelpers::ShowPanelOnClick()) {
+-		_attachToggle->installEventFilter(_attachBotsMenu.get());
+-	}
++	// macOS ChatInputMenuView: the attach menu opens on click only.
+ 	_attachBotsMenu->heightValue(
+ 	) | rpl::on_next([=] {
+ 		updateOuterGeometry(_wrap->geometry());
  	}, _attachBotsMenu->lifetime());
  }
  
@@ -2098,6 +2480,10 @@ index aaa4ae0..77adb8a 100644
 +			p.setPen(Qt::NoPen);
 +		}
  		const auto r = _st.radius;
++		// While recording the record bar draws its own capsule over the field.
++		if (field && _st.circleSkip && isRecording() && _header->isHidden()) {
++			return;
++		}
 +		if (field && _st.circleSkip) {
 +			// Attach and send are round buttons outside the capsule.
 +			for (const auto button : {
@@ -2144,8 +2530,76 @@ index b79537f..d71868c 100644
  
  	[[nodiscard]] auto baseSendButtonType() const;
  	[[nodiscard]] auto computeSendButtonType() const;
+diff --git a/Telegram/SourceFiles/history/view/controls/history_view_voice_record_bar.cpp b/Telegram/SourceFiles/history/view/controls/history_view_voice_record_bar.cpp
+index c49a6d0..2ec5543 100644
+--- a/Telegram/SourceFiles/history/view/controls/history_view_voice_record_bar.cpp
++++ b/Telegram/SourceFiles/history/view/controls/history_view_voice_record_bar.cpp
+@@ -2245,10 +2245,29 @@ void VoiceRecordBar::init() {
+ 	sizeValue(
+ 	) | rpl::on_next([=](QSize size) {
+ 		_centerY = size.height() / 2;
++		if (!_backgroundRect) {
++			// Between the edge and the round send button, as the field is.
++			const auto circle = 2 * st::historyComposeCapsuleRadius;
++			const auto side = st::historySendRight
++				+ st::historyComposeCapsuleMargin
++				+ (_send->width() - circle) / 2;
++			const auto gap = st::historyComposeCircleSkip
++				- st::historyComposeFieldInset
++				+ (_send->width() - circle) / 2;
++			_capsule = QRect(
++				side,
++				_centerY - circle / 2,
++				size.width() - 2 * side - circle - gap,
++				circle);
++		}
+ 		{
+ 			const auto maxD = st::historyRecordSignalRadius * 2;
+ 			const auto point = _centerY - st::historyRecordSignalRadius;
+-			_redCircleRect = { point, point, maxD, maxD };
++			// macOS: the red dot is 20px from the capsule edge.
++			const auto left = _capsule.isEmpty()
++				? point
++				: (_capsule.x() + st::historyComposeCapsuleRadius);
++			_redCircleRect = { left, point, maxD, maxD };
+ 		}
+ 		{
+ 			const auto durationLeft = _redCircleRect.x()
+@@ -2274,7 +2293,18 @@ void VoiceRecordBar::init() {
+ 		if (_backgroundRect) {
+ 			_backgroundRect->paint(p, rect());
+ 		} else {
+-			p.fillRect(clip, _st.bg);
++			auto hq = PainterHighQualityEnabler(p);
++			const auto half = st::lineWidth / 2.;
++			const auto radius = st::historyComposeCapsuleRadius - half;
++			// macOS separator: text color at 12%, visible in any theme.
++			p.setPen(QPen(
++				anim::with_alpha(st::windowFg->c, 0.12),
++				st::lineWidth));
++			p.setBrush(_st.bg);
++			p.drawRoundedRect(
++				QRectF(_capsule).marginsRemoved({ half, half, half, half }),
++				radius,
++				radius);
+ 		}
+ 
+ 		p.setOpacity(std::min(p.opacity(), 1. - showListenAnimationRatio()));
+diff --git a/Telegram/SourceFiles/history/view/controls/history_view_voice_record_bar.h b/Telegram/SourceFiles/history/view/controls/history_view_voice_record_bar.h
+index 59fda5e..ca77afc 100644
+--- a/Telegram/SourceFiles/history/view/controls/history_view_voice_record_bar.h
++++ b/Telegram/SourceFiles/history/view/controls/history_view_voice_record_bar.h
+@@ -203,6 +203,8 @@ private:
+ 
+ 	int _centerY = 0;
+ 	QRect _redCircleRect;
++	// macOS ChatInputRecordingView: a capsule instead of a full-width bar.
++	QRect _capsule;
+ 	QRect _durationRect;
+ 	QRect _messageRect;
+ 
 diff --git a/Telegram/SourceFiles/history/view/history_view_chat_section.cpp b/Telegram/SourceFiles/history/view/history_view_chat_section.cpp
-index e3c019e..26624a5 100644
+index e3c019e..1e998c2 100644
 --- a/Telegram/SourceFiles/history/view/history_view_chat_section.cpp
 +++ b/Telegram/SourceFiles/history/view/history_view_chat_section.cpp
 @@ -4485,7 +4485,7 @@ void ChatWidget::updateControlsGeometry() {
@@ -2157,8 +2611,45 @@ index e3c019e..26624a5 100644
  	const auto tabsLeftSkip = _subsectionTabs
  		? _subsectionTabs->leftSkip()
  		: 0;
+@@ -4548,9 +4548,18 @@ void ChatWidget::updateControlsGeometry() {
+ 	}
+ 	bottom -= tabsBottomSkip;
+ 
+-	const auto scrollHeight = bottom - top;
++	// macOS ChatInputView floats: the history scrolls under the capsule.
++	const auto overlap = (isChoosingTheme()
++		|| bottomHeight
++		|| _suggestOptions
++		|| tabsBottomSkip
++		|| (_kbScroll && _kbShown && keyboardRowsVisible()))
++		? 0
++		: _composeControls->heightCurrent();
++	const auto overlapChanged = _inner->setBottomOverlap(overlap);
++	const auto scrollHeight = bottom - top + overlap;
+ 	const auto scrollSize = QSize(innerWidth, scrollHeight);
+-	if (_scroll->size() != scrollSize) {
++	if (_scroll->size() != scrollSize || overlapChanged) {
+ 		_skipScrollEvent = true;
+ 		_scroll->resize(scrollSize);
+ 		_inner->resizeToWidth(scrollSize.width(), _scroll->height());
+@@ -4574,10 +4583,13 @@ void ChatWidget::updateControlsGeometry() {
+ 		updateInnerVisibleArea();
+ 	}
+ 	_composeControls->move(0, composeTop);
+-	_composeControls->setAutocompleteBoundingRect(_scroll->geometry());
++	const auto visibleScroll = _scroll->geometry().marginsRemoved(
++		{ 0, 0, 0, overlap });
++	_composeControls->setAutocompleteBoundingRect(visibleScroll);
+ 	if (_supportAutocomplete) {
+-		_supportAutocomplete->setBoundings(_scroll->geometry());
++		_supportAutocomplete->setBoundings(visibleScroll);
+ 	}
++	_cornerButtons.setBottomSkip(overlap);
+ 	_composeControlsTop = composeTop;
+ 
+ 	if (!animatingShow()) {
 diff --git a/Telegram/SourceFiles/history/view/history_view_corner_buttons.cpp b/Telegram/SourceFiles/history/view/history_view_corner_buttons.cpp
-index 3fa5e74..80ecc14 100644
+index 3fa5e74..c25e216 100644
 --- a/Telegram/SourceFiles/history/view/history_view_corner_buttons.cpp
 +++ b/Telegram/SourceFiles/history/view/history_view_corner_buttons.cpp
 @@ -452,7 +452,8 @@ void CornerButtons::updateVisibility(Type type, bool shown) {
@@ -2171,6 +2662,94 @@ index 3fa5e74..80ecc14 100644
  	}
  }
  
+@@ -525,6 +526,13 @@ void CornerButtons::updateJumpDownVisibility(std::optional<int> counter) {
+ 	}
+ }
+ 
++void CornerButtons::setBottomSkip(int skip) {
++	if (_bottomSkip != skip) {
++		_bottomSkip = skip;
++		updatePositions();
++	}
++}
++
+ void CornerButtons::updatePositions() {
+ 	const auto checkVisibility = [](CornerButton &button) {
+ 		const auto shouldBeHidden = !button.shown
+@@ -541,7 +549,7 @@ void CornerButtons::updatePositions() {
+ 
+ 	const auto columnWidth = st::historyToDown.width
+ 		+ 2 * st::historyToDownPosition.x();
+-	_column.resize(columnWidth, _parent->height());
++	_column.resize(columnWidth, _parent->height() - _bottomSkip);
+ 	_column.moveToRight(0, 0, _parent->width());
+ 
+ 	const auto historyDownShown = shown(_down);
+@@ -557,7 +565,7 @@ void CornerButtons::updatePositions() {
+ 			historyDownShown);
+ 		_down.widget->moveToRight(
+ 			st::historyToDownPosition.x(),
+-			_parent->height() - top);
++			_column.height() - top);
+ 	}
+ 	{
+ 		const auto right = anim::interpolate(
+@@ -568,7 +576,7 @@ void CornerButtons::updatePositions() {
+ 			0,
+ 			_down.widget->height() + skip,
+ 			historyDownShown);
+-		const auto top = _parent->height()
++		const auto top = _column.height()
+ 			- _mentions.widget->height()
+ 			- st::historyToDownPosition.y()
+ 			- shift;
+@@ -587,7 +595,7 @@ void CornerButtons::updatePositions() {
+ 			0,
+ 			_mentions.widget->height() + skip,
+ 			unreadMentionsShown);
+-		const auto top = _parent->height()
++		const auto top = _column.height()
+ 			- _reactions.widget->height()
+ 			- st::historyToDownPosition.y()
+ 			- shift;
+@@ -610,7 +618,7 @@ void CornerButtons::updatePositions() {
+ 				0,
+ 				_reactions.widget->height() + skip,
+ 				unreadReactionsShown);
+-		const auto top = _parent->height()
++		const auto top = _column.height()
+ 			- _pollVotes.widget->height()
+ 			- st::historyToDownPosition.y()
+ 			- shift;
+@@ -637,7 +645,7 @@ void CornerButtons::updatePositions() {
+ 				0,
+ 				_pollVotes.widget->height() + skip,
+ 				unreadPollVotesShown);
+-		const auto top = _parent->height()
++		const auto top = _column.height()
+ 			- _stash.widget->height()
+ 			- st::historyToDownPosition.y()
+ 			- shift;
+diff --git a/Telegram/SourceFiles/history/view/history_view_corner_buttons.h b/Telegram/SourceFiles/history/view/history_view_corner_buttons.h
+index 68f4ff3..bcf6759 100644
+--- a/Telegram/SourceFiles/history/view/history_view_corner_buttons.h
++++ b/Telegram/SourceFiles/history/view/history_view_corner_buttons.h
+@@ -93,6 +93,7 @@ public:
+ 	void updateUnreadThingsVisibility();
+ 	void updateJumpDownVisibility(std::optional<int> counter = {});
+ 	void updatePositions();
++	void setBottomSkip(int skip);
+ 
+ 	[[nodiscard]] rpl::producer<> stashClicks() const;
+ 	void setStashMenuFiller(Fn<void(not_null<Ui::PopupMenu*>)> filler);
+@@ -139,6 +140,7 @@ private:
+ 	// whole group after the list instead of before it.
+ 	Ui::RpWidget _column;
+ 	QRegion _columnMask;
++	int _bottomSkip = 0;
+ 
+ 	CornerButton _down;
+ 	CornerButton _mentions;
 diff --git a/Telegram/SourceFiles/history/view/history_view_element.cpp b/Telegram/SourceFiles/history/view/history_view_element.cpp
 index aab807a..8ada874 100644
 --- a/Telegram/SourceFiles/history/view/history_view_element.cpp
@@ -2185,9 +2764,18 @@ index aab807a..8ada874 100644
  
  Element *HoveredElement/* = nullptr*/;
 diff --git a/Telegram/SourceFiles/history/view/history_view_list_widget.cpp b/Telegram/SourceFiles/history/view/history_view_list_widget.cpp
-index 555a33e..3b2b12b 100644
+index 555a33e..4d1ab97 100644
 --- a/Telegram/SourceFiles/history/view/history_view_list_widget.cpp
 +++ b/Telegram/SourceFiles/history/view/history_view_list_widget.cpp
+@@ -724,7 +724,7 @@ ListWidget::ListWidget(
+ 			const auto top = itemTop(view);
+ 			if (top >= 0
+ 				&& top + view->height() > _visibleTop
+-				&& top < _visibleBottom) {
++				&& top < visibleContentBottom()) {
+ 				*query.isVisible = true;
+ 			}
+ 		}
 @@ -3090,7 +3090,7 @@ void ListWidget::startItemRevealAnimations() {
  					0.,
  					1.,
@@ -2197,7 +2785,25 @@ index 555a33e..3b2b12b 100644
  				if (view->data()->out()) {
  					_delegate->listChatTheme()->rotateComplexGradientBackground();
  				}
-@@ -3498,7 +3498,15 @@ void ListWidget::paintEvent(QPaintEvent *e) {
+@@ -3342,7 +3342,7 @@ void ListWidget::checkActivation() {
+ 	}
+ 	for (const auto &view : ranges::views::reverse(_items)) {
+ 		const auto bottom = itemTop(view) + view->height();
+-		if (_visibleBottom + _itemsRevealHeight >= bottom) {
++		if (visibleContentBottom() + _itemsRevealHeight >= bottom) {
+ 			const auto item = view->data();
+ 			if (item->isRegular()) {
+ 				delegate()->listMarkReadTill(item);
+@@ -3366,7 +3366,7 @@ void ListWidget::paintEvent(QPaintEvent *e) {
+ 	const auto metricsStale = _readMetricsTracker
+ 		&& base::take(_readMetricsStale);
+ 	if (metricsStale) {
+-		_readMetricsTracker->startBatch(_visibleTop, _visibleBottom);
++		_readMetricsTracker->startBatch(_visibleTop, visibleContentBottom());
+ 	}
+ 	auto readTill = (HistoryItem*)nullptr;
+ 	auto readContents = base::flat_set<not_null<HistoryItem*>>();
+@@ -3498,12 +3498,22 @@ void ListWidget::paintEvent(QPaintEvent *e) {
  			context.fullMessageSelected = selection.fullMessageSelected;
  			context.messageSelection = selection.messageSelection;
  			context.highlight = _highlighter.state(item);
@@ -2213,6 +2819,96 @@ index 555a33e..3b2b12b 100644
  		}
  		if (_translateTracker) {
  			_translateTracker->add(view);
+ 		}
+-		if (metricsStale && height > 0) {
++		if (metricsStale && height > 0
++			&& top < visibleContentBottom()
++			&& top + height > _visibleTop) {
+ 			_readMetricsTracker->push(item, top, height);
+ 		}
+ 		const auto isSponsored = item->isSponsored();
+@@ -3512,11 +3522,11 @@ void ListWidget::paintEvent(QPaintEvent *e) {
+ 		const auto withReaction = context.reactionInfo
+ 			&& item->hasUnreadReaction();
+ 		const auto yShown = [&](int y) {
+-			return (_visibleBottom >= y && _visibleTop <= y);
++			return (visibleContentBottom() >= y && _visibleTop <= y);
+ 		};
+ 		const auto markShown = (_context != Context::ChatPreview)
+ 			&& (isSponsored
+-				? view->markSponsoredViewed(_visibleBottom - top)
++				? view->markSponsoredViewed(visibleContentBottom() - top)
+ 				: withReaction
+ 				? yShown(top + context.reactionInfo->position.y())
+ 				: isUnread
+@@ -3803,7 +3813,7 @@ void ListWidget::maybeMarkReactionsRead(not_null<HistoryItem*> item) {
+ 	const auto reactionCenter
+ 		= view->reactionButtonParameters({}, {}).center.y();
+ 	if (top + reactionCenter < _visibleTop
+-		|| top + view->height() > _visibleBottom) {
++		|| top + view->height() > visibleContentBottom()) {
+ 		return;
+ 	}
+ 	_delegate->listMarkContentsRead({ item });
+@@ -4904,6 +4914,11 @@ void ListWidget::mouseReleaseEvent(QMouseEvent *e) {
+ 	}
+ }
+ 
++int ListWidget::visibleContentBottom() const {
++	// Painting extends behind the composer; read receipts must not.
++	return std::max(_visibleTop, _visibleBottom - _bottomOverlap);
++}
++
+ void ListWidget::markReadMetricsStale() {
+ 	_readMetricsStale = true;
+ 	update();
+@@ -5892,9 +5907,14 @@ AboutView *ListWidget::aboutView() const {
+ 
+ int ListWidget::countBottomPadding() const {
+ 	const auto about = aboutView();
+-	return (about && about->view() && !about->aboveHistory())
+-		? std::max(st::historyPaddingBottom, about->height)
+-		: st::historyPaddingBottom;
++	return _bottomOverlap
++		+ ((about && about->view() && !about->aboveHistory())
++			? std::max(st::historyPaddingBottom, about->height)
++			: st::historyPaddingBottom);
++}
++
++bool ListWidget::setBottomOverlap(int overlap) {
++	return (std::exchange(_bottomOverlap, overlap) != overlap);
+ }
+ 
+ int ListWidget::countItemsTop() const {
+diff --git a/Telegram/SourceFiles/history/view/history_view_list_widget.h b/Telegram/SourceFiles/history/view/history_view_list_widget.h
+index 6591327..c7580f7 100644
+--- a/Telegram/SourceFiles/history/view/history_view_list_widget.h
++++ b/Telegram/SourceFiles/history/view/history_view_list_widget.h
+@@ -348,6 +348,8 @@ public:
+ 
+ 	// Set the correct scroll position after being resized.
+ 	void restoreScrollPosition();
++	// Returns true if changed, the caller relayouts the list then.
++	bool setBottomOverlap(int overlap);
+ 
+ 	void resizeToWidth(int newWidth, int minHeight);
+ 	void shiftScrollBaseline(int delta);
+@@ -698,6 +700,7 @@ private:
+ 
+ 	void onTouchSelect();
+ 	void onTouchScrollTimer();
++	[[nodiscard]] int visibleContentBottom() const;
+ 	void markReadMetricsStale();
+ 	void registerReadMetricsActivity();
+ 
+@@ -1023,6 +1026,7 @@ private:
+ 	bool _readMetricsStale = false;
+ 
+ 	int _minHeight = 0;
++	int _bottomOverlap = 0;
+ 	int _visibleTop = 0;
+ 	int _visibleBottom = 0;
+ 	Element *_visibleTopItem = nullptr;
 diff --git a/Telegram/SourceFiles/history/view/history_view_top_bar_widget.cpp b/Telegram/SourceFiles/history/view/history_view_top_bar_widget.cpp
 index 30024a8..9bf8c66 100644
 --- a/Telegram/SourceFiles/history/view/history_view_top_bar_widget.cpp
