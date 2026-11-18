@@ -17792,7 +17792,7 @@ index 0801610..1c9e682 100644
  
  	const style::SettingsButton &_st;
 diff --git a/ui/widgets/checkbox.cpp b/ui/widgets/checkbox.cpp
-index df0dc58..547c481 100644
+index df0dc58..4245b31 100644
 --- a/ui/widgets/checkbox.cpp
 +++ b/ui/widgets/checkbox.cpp
 @@ -89,6 +89,49 @@ void ToggleView::paint(QPainter &p, int left, int top, int outerWidth) {
@@ -17845,6 +17845,102 @@ index df0dc58..547c481 100644
  	auto fullWidth = _st->diameter + _st->width;
  	auto innerDiameter = _st->diameter - 2 * _st->shift;
  	auto innerRadius = float64(innerDiameter) / 2.;
+@@ -583,6 +626,14 @@ int Checkbox::countTextMinWidth() const {
+ 
+ QRect Checkbox::checkRect() const {
+ 	auto size = _check->getSize();
++	if (_st.cardRadius) {
++		return {
++			width() - _st.margin.right() - size.width(),
++			(height() - size.height()) / 2,
++			size.width(),
++			size.height(),
++		};
++	}
+ 	return QRect({
+ 		(_checkAlignment & Qt::AlignHCenter)
+ 			? (width() - size.width()) / 2
+@@ -695,6 +746,38 @@ void Checkbox::updateNaturalWidth() {
+ void Checkbox::paintEvent(QPaintEvent *e) {
+ 	Painter p(this);
+ 
++	if (_st.cardRadius) {
++		const auto hasCard = [&](int y) {
++			const auto sibling = dynamic_cast<Checkbox*>(
++				parentWidget()->childAt(mapToParent(QPoint(width() / 2, y))));
++			return sibling && sibling->_st.cardRadius;
++		};
++		const auto next = parentWidget() && hasCard(height());
++		const auto prev = parentWidget() && hasCard(-1);
++		const auto radius = std::min(_st.cardRadius, height() / 2);
++		auto path = QPainterPath();
++		path.setFillRule(Qt::WindingFill);
++		path.addRoundedRect(rect(), radius, radius);
++		if (prev) {
++			path.addRect(QRect(0, 0, width(), height() / 2));
++		}
++		if (next) {
++			path.addRect(QRect(0, height() / 2, width(), height() - height() / 2));
++		}
++		const auto hq = PainterHighQualityEnabler(p);
++		p.fillPath(path, ((isOver() || isDown() || hasFocus()) && !isDisabled())
++			? st::windowBgOver
++			: st::windowBg);
++		if (next) {
++			p.fillRect(
++				_st.margin.left(),
++				height() - st::lineWidth,
++				std::max(width() - _st.margin.left() - _st.margin.right(), 0),
++				st::lineWidth,
++				st::menuSeparatorFg);
++		}
++	}
++
+ 	auto check = checkRect();
+ 	auto active = _check->currentAnimationValue();
+ 	if (isDisabled()) {
+@@ -715,6 +798,17 @@ void Checkbox::paintEvent(QPaintEvent *e) {
+ 	if (realCheckRect.contains(e->rect()) || _text.isEmpty()) {
+ 		return;
+ 	}
++	if (_st.cardRadius) {
++		const auto inset = _st.margin.left();
++		p.setPen(anim::pen(_st.textFg, _st.textFgActive, active));
++		_text.drawLeftElided(
++			p,
++			inset,
++			(height() - _st.style.font->height) / 2,
++			std::max(check.x() - 2 * inset, 0),
++			width());
++		return;
++	}
+ 
+ 	const auto alignLeft = (_checkAlignment & Qt::AlignLeft);
+ 	const auto alignRight = (_checkAlignment & Qt::AlignRight);
+@@ -904,6 +998,10 @@ void Checkbox::handlePress() {
+ 
+ int Checkbox::resizeGetHeight(int newWidth) {
+ 	const auto result = _check->getSize().height();
++	if (_st.cardRadius) {
++		return std::max(result, _st.style.font->height)
++			+ _st.margin.top() + _st.margin.bottom();
++	}
+ 	const auto centered = ((_checkAlignment & Qt::AlignHCenter) != 0);
+ 	if (!centered && _allowTextLines == 1) {
+ 		return result;
+diff --git a/ui/widgets/checkbox.h b/ui/widgets/checkbox.h
+index d351629..62fb1aa 100644
+--- a/ui/widgets/checkbox.h
++++ b/ui/widgets/checkbox.h
+@@ -239,7 +239,7 @@ public:
+ 	void finishAnimating();
+ 
+ 	[[nodiscard]] QMargins getMargins() const override {
+-		return _st.margin;
++		return _st.cardRadius ? QMargins() : _st.margin;
+ 	}
+ 
+ 	void updateCheck() {
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
 index d57ac56..6399873 100644
 --- a/ui/widgets/fields/input_field.cpp
@@ -17908,6 +18004,40 @@ index abf6b4b..f1d3078 100644
  
  	bool _customUpDown = false;
  
+diff --git a/ui/widgets/inner_dropdown.cpp b/ui/widgets/inner_dropdown.cpp
+index 4476642..02ff8b3 100644
+--- a/ui/widgets/inner_dropdown.cpp
++++ b/ui/widgets/inner_dropdown.cpp
+@@ -19,7 +19,7 @@ InnerDropdown::InnerDropdown(
+ 	const style::InnerDropdown &st)
+ : RpWidget(parent)
+ , _st(st)
+-, _roundRect(st::innerDropdownRadius, _st.bg)
++, _roundRect(_st.radius, _st.bg)
+ , _boxShadow(_st.animation.shadow)
+ , _hideTimer([=] { hideAnimated(); })
+ , _scroll(this, _st.scroll) {
+@@ -126,7 +126,7 @@ void InnerDropdown::paintEvent(QPaintEvent *e) {
+ 	} else {
+ 		if (!_cache.isNull()) _cache = QPixmap();
+ 		const auto inner = rect().marginsRemoved(_st.padding);
+-		_boxShadow.paint(p, inner, st::innerDropdownRadius);
++		_boxShadow.paint(p, inner, _st.radius);
+ 		_roundRect.paint(p, inner);
+ 	}
+ }
+@@ -334,9 +334,9 @@ void InnerDropdown::startShowAnimation() {
+ 		const auto pixelRatio = style::DevicePixelRatio();
+ 		_showAnimation = std::make_unique<PanelAnimation>(_st.animation, _origin);
+ 		auto inner = rect().marginsRemoved(_st.padding);
+-		_showAnimation->setFinalImage(std::move(cache), QRect(inner.topLeft() * pixelRatio, inner.size() * pixelRatio), st::innerDropdownRadius);
++		_showAnimation->setFinalImage(std::move(cache), QRect(inner.topLeft() * pixelRatio, inner.size() * pixelRatio), _st.radius);
+ 		_showAnimation->setCornerMasks(
+-			Images::CornersMask(st::innerDropdownRadius));
++			Images::CornersMask(_st.radius));
+ 		_showAnimation->start();
+ 	}
+ 	hideChildren();
 diff --git a/ui/widgets/menu/menu_action.cpp b/ui/widgets/menu/menu_action.cpp
 index 4c16b67..068c37c 100644
 --- a/ui/widgets/menu/menu_action.cpp
@@ -17965,7 +18095,7 @@ index 2a2e689..b051a05 100644
  
  private:
 diff --git a/ui/widgets/widgets.style b/ui/widgets/widgets.style
-index 8b8df7d..7156308 100644
+index 8b8df7d..ba7a19f 100644
 --- a/ui/widgets/widgets.style
 +++ b/ui/widgets/widgets.style
 @@ -130,6 +130,8 @@ Toggle {
@@ -17977,7 +18107,15 @@ index 8b8df7d..7156308 100644
  }
  
  Check {
-@@ -264,6 +266,9 @@ Menu {
+@@ -156,6 +158,7 @@ Radio {
+ }
+ 
+ Checkbox {
++	cardRadius: pixels;
+ 	textFg: color;
+ 	textFgActive: color;
+ 
+@@ -264,6 +267,9 @@ Menu {
  	widthMax: pixels;
  
  	ripple: RippleAnimation;
@@ -17987,7 +18125,15 @@ index 8b8df7d..7156308 100644
  }
  
  PopupMenu {
-@@ -557,6 +562,9 @@ SettingsButton {
+@@ -494,6 +500,7 @@ MultiSelect {
+ }
+ 
+ InnerDropdown {
++	radius: pixels;
+ 	padding: margins;
+ 	shadow: Shadow;
+ 	animation: PanelAnimation;
+@@ -557,6 +564,9 @@ SettingsButton {
  	toggleSkip: pixels;
  
  	ripple: RippleAnimation;
@@ -17997,7 +18143,7 @@ index 8b8df7d..7156308 100644
  }
  
  SettingsCountButton {
-@@ -874,6 +882,8 @@ defaultToggle: Toggle {
+@@ -874,6 +884,8 @@ defaultToggle: Toggle {
  	vshift: 0px;
  	stroke: 0px;
  	rippleAreaPadding: 8px;
@@ -18006,7 +18152,7 @@ index 8b8df7d..7156308 100644
  }
  defaultCheckbox: Checkbox {
  	textFg: windowFg;
-@@ -929,12 +939,12 @@ roundShadowRadius8px: Shadow {
+@@ -929,12 +941,12 @@ roundShadowRadius8px: Shadow {
  }
  
  defaultPanelAnimation: PanelAnimation {
@@ -18024,7 +18170,7 @@ index 8b8df7d..7156308 100644
  	startFadeTop: 0.;
  	fadeHeight: 0.2;
  	fadeOpacity: 1.0;
-@@ -966,7 +976,7 @@ defaultMenu: Menu {
+@@ -966,7 +978,7 @@ defaultMenu: Menu {
  	itemFgShortcutOver: windowSubTextFgOver;
  	itemFgShortcutDisabled: menuFgDisabled;
  	itemIconPosition: point(0px, 0px);
@@ -18033,7 +18179,7 @@ index 8b8df7d..7156308 100644
  	itemRightSkip: 6px;
  	itemStyle: defaultTextStyle;
  	itemToggle: defaultMenuToggle;
-@@ -981,6 +991,9 @@ defaultMenu: Menu {
+@@ -981,6 +993,9 @@ defaultMenu: Menu {
  	widthMax: 300px;
  
  	ripple: defaultRippleAnimation;
@@ -18043,7 +18189,7 @@ index 8b8df7d..7156308 100644
  }
  defaultPopupMenu: PopupMenu {
  	shadow: defaultBoxShadow;
-@@ -992,9 +1005,9 @@ defaultPopupMenu: PopupMenu {
+@@ -992,9 +1007,9 @@ defaultPopupMenu: PopupMenu {
  
  	menu: defaultMenu;
  
@@ -18056,7 +18202,15 @@ index 8b8df7d..7156308 100644
  }
  
  defaultPillTabs: PillTabs {
-@@ -1497,10 +1510,18 @@ backButton: IconButton(defaultIconButton) {
+@@ -1254,6 +1269,7 @@ defaultPeerListCheckbox: RoundImageCheckbox {
+ 
+ innerDropdownRadius: 8px;
+ defaultInnerDropdown: InnerDropdown {
++	radius: innerDropdownRadius;
+ 	padding: margins(10px, 10px, 10px, 10px);
+ 	shadow: roundShadowRadius8px;
+ 	animation: PanelAnimation(defaultPanelAnimation) {
+@@ -1497,10 +1513,18 @@ backButton: IconButton(defaultIconButton) {
  }
  
  defaultSettingsToggle: Toggle(defaultToggle) {
@@ -18077,7 +18231,7 @@ index 8b8df7d..7156308 100644
  }
  defaultSettingsRightLabel: FlatLabel(defaultFlatLabel) {
  	textFg: windowActiveTextFg;
-@@ -1524,6 +1545,9 @@ defaultSettingsButton: SettingsButton {
+@@ -1524,6 +1548,9 @@ defaultSettingsButton: SettingsButton {
  	toggleSkip: 22px;
  
  	ripple: defaultRippleAnimation;
@@ -18087,7 +18241,7 @@ index 8b8df7d..7156308 100644
  }
  
  defaultSideBarButton: SideBarButton {
-@@ -1693,8 +1717,8 @@ menuIconAttentionColor: attentionButtonFg;
+@@ -1693,8 +1720,8 @@ menuIconAttentionColor: attentionButtonFg;
  menuIconSubmenuArrow: defaultMenuArrow;
  
  menuWithIcons: Menu(defaultMenu) {
@@ -18098,7 +18252,7 @@ index 8b8df7d..7156308 100644
  
  	arrow: menuIconSubmenuArrow;
  }
-@@ -1707,7 +1731,7 @@ menuAttention: Menu(defaultMenu) {
+@@ -1707,7 +1734,7 @@ menuAttention: Menu(defaultMenu) {
  	itemFgOver: attentionButtonFgOver;
  }
  popupMenuWithIcons: PopupMenu(defaultPopupMenu) {

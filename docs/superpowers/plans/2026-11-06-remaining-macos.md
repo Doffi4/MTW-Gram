@@ -47,3 +47,50 @@ Debug build tools/build-win.bat Debug: exit 0, build/build-info-navigation.log. 
 Excluded from this stage: sidebar width preference/drag constraints, profile editing forms, colored-profile-specific animation, new icons, live UI validation. Existing behavior is preserved where no macOS-specific styling was added.
 
 Task 3 validation: Debug exit 0 (build/build-profile-panels-fixed.log); three profile geometry checks and compose visibility regression pass. Fixed a missing styles/style_info.h include found by the first compile. UI not run.
+
+## Task 4: Edit-profile cards
+
+- [x] Compare the form against recon screenshot S17 (`2Bi-settings_edit-profile_system.png`) and the 600 px cap in `GeneralRowItem.swift`.
+- [x] Center the existing settings form and match the bio card width, corner radius and inner padding to the surrounding cards. Keep the existing editor, character limit and save callbacks.
+- [x] Check narrow and wide form widths and verify the regenerated patch against `patches/BASE`.
+- [x] Build Debug and run the five local regression checks (`build/build-profile-edit-layout.log`).
+
+The photo and name editors still use the existing Telegram Desktop controls. The side panel animation is pending.
+
+## Task 5: Global search sections
+
+- [x] Compare results against recon screenshot S07 (`31-search_results_tinted.png`).
+- [x] Label the chats and contacts section and use its height for painting, hit testing and row offsets. Preserve the existing result groups and filters.
+- [x] Build Debug (`build/build-search-sections-final.log`), run the six local checks and apply the patch to the clean base.
+
+Task 6 covers the search tabs and global peers expander from S07.
+
+## Task 6: Global search and message surfaces
+
+- [x] S07. Style the native global search tabs and fold global peers to five rows. Keep the other rows available through the section action.
+- [x] S08. Draw the unread bar as a rounded separator and retain the existing first-unread anchor. Animate chip insertion, removal, movement and selection, then apply the hover panel press, reveal and loading states.
+- [x] S10. Use the message menu reaction pill with up to seven quick choices and an expand button. Keep the PopupMenu action and keyboard handlers.
+- [x] S14. Style the attachment dropdown and route the paperclip through it in both composers when available. Open camera captures in the existing media confirmation.
+- [x] Run local regression checks and replay both patches from the BASE commits.
+- [x] Finish the Debug build.
+
+Debug passed with exit code 0 (`build/build-must-ui-verified.log`). All 14 local regression checks passed. Both patches applied to clean BASE indexes and matched the working sources.
+
+Visual comparison and live account scenarios remain open.
+
+## Task 7. Emoji, stickers and GIF panels
+
+- [x] Review the S13 popup and sidebar references.
+- [x] Place the category strip above the grid and the rounded tab control below it. Preserve scrolling, search, peer restrictions, selection and the current tab across both panel hosts.
+- [x] Check the viewport and tab animation. Build Debug and replay both patches from BASE.
+
+Debug passed with exit code 0 (`build/build-entertainment-panel.log`). All 16 local checks passed. Both patches replayed on BASE and matched the working sources. Visual comparison and the sidebar entrance animation remain open.
+
+## Task 8. Remaining required settings and window states
+
+- [x] Keep the Windows caption strip at 24 px, match it to the window background, and hide it in fullscreen.
+- [x] Use a shared 90 px width for the compact dialogs list and a 100 px drag snap. Center avatars and use the new layout when going back from one column to two.
+- [x] Read the Windows app color preference during startup and on settings changes. Keep the Qt fallback.
+- [x] Lay out right-hand values and render native radio buttons as grouped settings rows.
+
+Debug passed with exit code 0 (`build/build-required-ui-verified.log`). All 20 local regression checks passed. Both patches applied to their BASE commits and matched the working sources. An isolated executable read the Windows app preference and ran 16 cases for the follow-system decision with palette application stubbed. Visual comparison and a live OS theme change with the main client open remain unverified.

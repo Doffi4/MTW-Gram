@@ -3,3 +3,4 @@ build/
 *.log
 *.bundle
 __pycache__/
+graphify-out/

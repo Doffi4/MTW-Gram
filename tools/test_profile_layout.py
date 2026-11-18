@@ -5,6 +5,8 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1] / "refs/tdesktop/Telegram/SourceFiles"
+PROFILE = Path("info/profile")
+INFORMATION = Path("settings/sections/settings_information.cpp")
 STYLES = "\n".join((ROOT / path).read_text(encoding="utf-8") for path in (
     "info/info.style", "info/profile/info_profile_top_bar.style"))
 PADDING = tuple(map(int, re.search(
@@ -12,7 +14,7 @@ PADDING = tuple(map(int, re.search(
 
 
 def expression(file, name, values):
-    source = (ROOT / "info/profile" / file).read_text(encoding="utf-8")
+    source = (ROOT / file).read_text(encoding="utf-8")
     match = re.search(r"const auto " + name + r" = (.*?);", source, re.S)
     assert match, f"Missing bounded profile layout: {name}"
     text = match[1].replace("std::min", "min").replace("std::max", "max")
@@ -29,9 +31,18 @@ class ProfileLayout(unittest.TestCase):
     def test_content_fits_and_is_centered(self):
         for width in (0, 1, 292, 358, 623, 624, 625, 1280, 2560):
             values = {"newWidth": width}
-            content = expression("info_profile_inner_widget.cpp", "contentWidth", values)
+            content = expression(PROFILE / "info_profile_inner_widget.cpp", "contentWidth", values)
             values["contentWidth"] = content
-            left = expression("info_profile_inner_widget.cpp", "contentLeft", values)
+            left = expression(PROFILE / "info_profile_inner_widget.cpp", "contentLeft", values)
+            self.assertEqual(content, min(width, 624))
+            self.assertLessEqual(abs(left - (width - left - content)), 1)
+
+    def test_edit_form_cards_fit_and_stay_centered(self):
+        for width in (0, 1, 292, 358, 623, 624, 625, 1280, 2560):
+            values = {"newWidth": width}
+            content = expression(INFORMATION, "contentWidth", values)
+            values["contentWidth"] = content
+            left = expression(INFORMATION, "contentLeft", values)
             self.assertEqual(content, min(width, 624))
             self.assertLessEqual(abs(left - (width - left - content)), 1)
 
@@ -39,17 +50,17 @@ class ProfileLayout(unittest.TestCase):
         for width in (0, 1, 292, 358, 600, 1280, 2560):
             for count in range(6):
                 values = {"newWidth": width, "count": count, "padding": PADDING[0] + PADDING[2]}
-                actions = expression("info_profile_top_bar.cpp", "actionsWidth", values)
+                actions = expression(PROFILE / "info_profile_top_bar.cpp", "actionsWidth", values)
                 self.assertEqual(actions, max(0, min(
                     width - 30, 570, count * 170 + max(count - 1, 0) * 20)))
                 values["actionsWidth"] = actions
-                left = expression("info_profile_top_bar.cpp", "actionsLeft", values)
+                left = expression(PROFILE / "info_profile_top_bar.cpp", "actionsLeft", values)
                 self.assertLessEqual(abs(left - (width - left - actions)), 1)
 
     def test_floating_tabs_stay_within_media_width(self):
         for width in (292, 358, 624, 1280):
             for natural in (200, 600, 900):
-                actual = expression("info_profile_widget.cpp", "stripWidth", {
+                actual = expression(PROFILE / "info_profile_widget.cpp", "stripWidth", {
                     "newWidth": width, "naturalWidth": natural})
                 self.assertEqual(actual, min(width, natural, 600))
 
