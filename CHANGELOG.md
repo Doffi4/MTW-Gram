@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.1-beta
+
+### Changed
+
+- Updated the Telegram Desktop base to 7.4.4.
+- Added GitHub update checking and installation under Settings → General.
+- Restyled desktop notifications and added a new default notification sound.
+
+### Fixed
+
+- Sized the chat header capsule to the visible status, including typing and other animated actions.
+- Prevented the notification stack's Hide All button from restarting its fade after the last notifications close.
+- Fixed a crash when opening the send menu and restored click animations in the emoji, sticker, and GIF sidebar.
+
 ## 0.2.0-beta
 
 ### Added

@@ -33,7 +33,7 @@ Alert в стиле Telegram-mac,dialogs,must,yes,yes,S30 60 61; source: default
 Режим выделения сообщений,chat,should,yes,no,S12 44c I1
 Плашки закрепа и перевода,chat,should,yes,no,S09 42
 Свайп-ответ,chat,should,yes,partial,D1; status: Жест tdesktop; D1 не согласован с recon
-Боковая (trailing) панель стикеров/GIF,composer,should,yes,partial,49a. Боковая панель использует оформление S13. Отдельная анимация появления и визуальная сверка открыты.
+Боковая (trailing) панель стикеров/GIF,composer,should,yes,yes,49a / S13 H4. Въезжает справа за 300 мс с кривой из recon. Чат синхронно освобождает место. Визуальная сверка открыта.
 Запись голосового в поле ввода,composer,should,yes,yes,L1-L4; source: VoiceRecordBar capsule; patches/README.md
 Индикатор печати,chat,should,yes,no,K1-K2
 Превью ссылок / файлов / медиа в пузыре,chat,should,yes,partial,layout §5.5; status: Размеры и группировка пузырей перенесены; типы медиа не сверены

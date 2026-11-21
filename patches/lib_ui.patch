@@ -4217,7 +4217,7 @@ HcmV?d00001
 
 diff --git a/fonts/Inter-LICENSE.txt b/fonts/Inter-LICENSE.txt
 new file mode 100644
-index 0000000..9b2ca37
+index 0000000000000000000000000000000000000000..9b2ca37b3ffc77391d8b2ebef4a974ef32bf46ea
 --- /dev/null
 +++ b/fonts/Inter-LICENSE.txt
 @@ -0,0 +1,92 @@
@@ -16750,7 +16750,7 @@ literal 0
 HcmV?d00001
 
 diff --git a/fonts/fonts.qrc b/fonts/fonts.qrc
-index 19baebb..3ca9ee4 100644
+index 19baebbcd1166661c9d3d177cd5c84d35024b523..3ca9ee4ca644f19457dff68358cc2e4cee5fa4c5 100644
 --- a/fonts/fonts.qrc
 +++ b/fonts/fonts.qrc
 @@ -1,5 +1,9 @@
@@ -16764,7 +16764,7 @@ index 19baebb..3ca9ee4 100644
      <file>OpenSans-Italic.ttf</file>
      <file>OpenSans-SemiBold.ttf</file>
 diff --git a/ui/colors.palette b/ui/colors.palette
-index e2ba0d6..9b67241 100644
+index e2ba0d69d05025caf097ee270c0f88608ee6e688..9b672417f72fbca203547feb805e971c3ede75dd 100644
 --- a/ui/colors.palette
 +++ b/ui/colors.palette
 @@ -8,18 +8,18 @@
@@ -17335,7 +17335,7 @@ index e2ba0d6..9b67241 100644
  sideBarBadgeFg: #ffffff; // filters side bar badge text
  
 diff --git a/ui/effects/animation_value.cpp b/ui/effects/animation_value.cpp
-index c83c418..21f7d3d 100644
+index c83c4183c0bf8b78dde9e1e05618154717973248..21f7d3dfdeb6f7c7414e6456196b1d0028eee4e1 100644
 --- a/ui/effects/animation_value.cpp
 +++ b/ui/effects/animation_value.cpp
 @@ -128,6 +128,59 @@ transition easeOutQuint = [](const float64 &delta, const float64 &dt) {
@@ -17399,7 +17399,7 @@ index c83c418..21f7d3d 100644
  	return AnimationsDisabled.value();
  };
 diff --git a/ui/effects/animation_value.h b/ui/effects/animation_value.h
-index 593432e..ae0eefa 100644
+index 593432e5e401e9699a6d1a1faa18df9e241ffcbf..ae0eefaef9b01d2b9a4a4e7af955baa02374cef6 100644
 --- a/ui/effects/animation_value.h
 +++ b/ui/effects/animation_value.h
 @@ -42,6 +42,27 @@ extern transition easeOutCubic;
@@ -17431,10 +17431,24 @@ index 593432e..ae0eefa 100644
  	auto dt0 = (bump - sqrt(bump * (bump - 1.)));
  	auto k = (1 / (2 * dt0 - 1));
 diff --git a/ui/effects/panel_animation.cpp b/ui/effects/panel_animation.cpp
-index fd2a4d4..850fd1e 100644
+index fd2a4d48e0f3fff0adaf4c217cb09ea8c6138e63..fcee08b62dbdf440231ccd86e71dc75f3084d034 100644
 --- a/ui/effects/panel_animation.cpp
 +++ b/ui/effects/panel_animation.cpp
-@@ -324,9 +324,15 @@ void PanelAnimation::start() {
+@@ -311,10 +311,11 @@ void PanelAnimation::start() {
+ 	RoundShadowAnimation::start(_finalWidth, _finalHeight, _finalImage.devicePixelRatio());
+ 	auto checkCorner = [this](const Corner &corner) {
+ 		if (!corner.valid()) return;
+-		if (_startWidth >= 0) Assert(corner.width <= _startWidth);
+-		if (_startHeight >= 0) Assert(corner.height <= _startHeight);
+ 		Assert(corner.width <= _finalInnerWidth);
+ 		Assert(corner.height <= _finalInnerHeight);
++		// A short menu can start smaller than its corner masks.
++		if (_startWidth >= 0) _startWidth = std::max(_startWidth, corner.width);
++		if (_startHeight >= 0) _startHeight = std::max(_startHeight, corner.height);
+ 	};
+ 	checkCorner(_topLeft);
+ 	checkCorner(_topRight);
+@@ -324,9 +325,15 @@ void PanelAnimation::start() {
  
  auto PanelAnimation::computeState(float64 dt, float64 opacity) const
  -> PaintState {
@@ -17454,7 +17468,7 @@ index fd2a4d4..850fd1e 100644
  	const auto widthProgress = (_startWidth < 0 || dt >= _widthDuration)
  		? 1.
 diff --git a/ui/layers/box_content.cpp b/ui/layers/box_content.cpp
-index b255ca0..14da6b8 100644
+index b255ca039aea5de1b277f63a555d8abe4df944bc..14da6b83f335ce6020bfef212e09d9593bf32ee1 100644
 --- a/ui/layers/box_content.cpp
 +++ b/ui/layers/box_content.cpp
 @@ -142,10 +142,18 @@ QPointer<RoundButton> BoxContent::addButton(
@@ -17478,7 +17492,7 @@ index b255ca0..14da6b8 100644
  	result->setClickedCallback(std::move(clickCallback));
  	getDelegate()->addButton(std::move(button));
 diff --git a/ui/layers/box_content.h b/ui/layers/box_content.h
-index d260678..fec3006 100644
+index d2606785c3267bf7020725143ee00eebdae3f1c7..fec300677f0d361e34fdfdfb3ff1cc2d6d063fb2 100644
 --- a/ui/layers/box_content.h
 +++ b/ui/layers/box_content.h
 @@ -161,6 +161,7 @@ public:
@@ -17498,7 +17512,7 @@ index d260678..fec3006 100644
  	int _innerBottomSkip = 0;
  	object_ptr<ScrollArea> _scroll = { nullptr };
 diff --git a/ui/layers/layer_widget.cpp b/ui/layers/layer_widget.cpp
-index ec3171e..0379ad3 100644
+index f8b1aa6a3d190faa1c8eabba0c49a295b15f05f8..72521dd1973c0910d7b193341f6c6a32f6641083 100644
 --- a/ui/layers/layer_widget.cpp
 +++ b/ui/layers/layer_widget.cpp
 @@ -22,6 +22,16 @@
@@ -17527,7 +17541,7 @@ index ec3171e..0379ad3 100644
  	void animationCallback();
  
  	QPixmap _bodyCache;
-@@ -206,18 +216,20 @@ void LayerStackWidget::BackgroundWidget::setLayerShown(bool shown) {
+@@ -206,19 +216,21 @@ void LayerStackWidget::BackgroundWidget::setLayerShown(bool shown) {
  			[this] { animationCallback(); },
  			_layerShown ? 0. : 1.,
  			_layerShown ? 1. : 0.,
@@ -17543,16 +17557,17 @@ index ec3171e..0379ad3 100644
 +		bool wasShown,
 +		crl::time duration) {
  	if (isShown() != wasShown) {
+ 		// Hiding fades the dim linearly, matching the box fade.
  		_a_shown.start(
  			[this] { animationCallback(); },
  			wasShown ? 1. : 0.,
  			wasShown ? 0. : 1.,
 -			_duration,
 +			duration ? duration : _duration,
- 			anim::easeOutCirc);
+ 			wasShown ? anim::linear : anim::easeOutCirc);
  	}
  }
-@@ -258,6 +270,20 @@ void LayerStackWidget::BackgroundWidget::paintEvent(QPaintEvent *e) {
+@@ -259,6 +271,20 @@ void LayerStackWidget::BackgroundWidget::paintEvent(QPaintEvent *e) {
  	auto bgOpacity = _a_shown.value(isShown() ? 1. : 0.);
  	auto specialLayerOpacity = _a_specialLayerShown.value(_specialLayerShown ? 1. : 0.);
  	auto layerOpacity = _a_layerShown.value(_layerShown ? 1. : 0.);
@@ -17574,7 +17589,7 @@ index ec3171e..0379ad3 100644
  		return;
  	}
 diff --git a/ui/layers/layers.style b/ui/layers/layers.style
-index ebb7796..31edfc7 100644
+index ebb7796ec33c8aca7e119069318d2998d4dfefa4..31edfc762a8e6eda3b096231c64c13a15806e864 100644
 --- a/ui/layers/layers.style
 +++ b/ui/layers/layers.style
 @@ -35,18 +35,31 @@ Box {
@@ -17644,7 +17659,7 @@ index ebb7796..31edfc7 100644
  separatePanelBorderCacheSize: 60px;
  separatePanelTitleHeight: 62px;
 diff --git a/ui/style/style_core.cpp b/ui/style/style_core.cpp
-index e589944..5c937c7 100644
+index e589944b7e4d458969efb27d17c4fe5b40b51fb3..5c937c7b598ade36d11818c5085d7b0c38eed7b1 100644
 --- a/ui/style/style_core.cpp
 +++ b/ui/style/style_core.cpp
 @@ -61,7 +61,7 @@ void StopShortAnimation() {
@@ -17657,10 +17672,10 @@ index e589944..5c937c7 100644
  }
  
 diff --git a/ui/style/style_core_font.cpp b/ui/style/style_core_font.cpp
-index a8d68ed..9407b87 100644
+index e179ece9410b513683419782f15791a36ab0c1bb..0652ba5d54df5ceab82af1fe9e3de8589cbd7602 100644
 --- a/ui/style/style_core_font.cpp
 +++ b/ui/style/style_core_font.cpp
-@@ -316,7 +316,7 @@ struct Metrics {
+@@ -318,7 +318,7 @@ struct Metrics {
  	} else if (overriden) {
  		font.setFamily(family);
  	} else {
@@ -17669,7 +17684,7 @@ index a8d68ed..9407b87 100644
  	}
  	font.setPixelSize(size);
  
-@@ -331,7 +331,7 @@ struct Metrics {
+@@ -333,7 +333,7 @@ struct Metrics {
  	}
  	if (!monospace) {
  		font.setWeight((flags & FontFlag::Bold)
@@ -17678,7 +17693,7 @@ index a8d68ed..9407b87 100644
  			: QFont::Normal);
  		if (font.bold()) {
  			const auto style = QFontInfo(font).styleName();
-@@ -370,7 +370,7 @@ void StartFonts() {
+@@ -372,7 +372,7 @@ void StartFonts() {
  
  	style_InitFontsResource();
  
@@ -17688,7 +17703,7 @@ index a8d68ed..9407b87 100644
  	for (const auto &file : QDir(u":/gui/fonts/"_q).entryInfoList()) {
  		LoadCustomFont(Ui::Text::FontPath(file.canonicalFilePath()));
 diff --git a/ui/widgets/buttons.cpp b/ui/widgets/buttons.cpp
-index 690ba6f..4d0bfa8 100644
+index a9f44e91c66fa545f523e54e97bebdb455346168..381b259e40717517a3c549e0f24c8033014b0c14 100644
 --- a/ui/widgets/buttons.cpp
 +++ b/ui/widgets/buttons.cpp
 @@ -16,8 +16,10 @@
@@ -17702,7 +17717,7 @@ index 690ba6f..4d0bfa8 100644
  
  namespace Ui {
  namespace {
-@@ -980,7 +982,14 @@ void SettingsButton::paintEvent(QPaintEvent *e) {
+@@ -995,7 +997,14 @@ void SettingsButton::paintEvent(QPaintEvent *e) {
  	const auto paintOver = (isOver() || isDown()) && !isDisabled();
  	paintBg(p, e->rect(), paintOver);
  
@@ -17718,7 +17733,7 @@ index 690ba6f..4d0bfa8 100644
  
  	const auto outerw = width();
  	paintText(p, paintOver, outerw);
-@@ -991,7 +1000,58 @@ void SettingsButton::paintEvent(QPaintEvent *e) {
+@@ -1006,7 +1015,58 @@ void SettingsButton::paintEvent(QPaintEvent *e) {
  }
  
  void SettingsButton::paintBg(Painter &p, const QRect &rect, bool over) const {
@@ -17779,20 +17794,20 @@ index 690ba6f..4d0bfa8 100644
  
  void SettingsButton::paintText(Painter &p, bool over, int outerw) const {
 diff --git a/ui/widgets/buttons.h b/ui/widgets/buttons.h
-index 0801610..1c9e682 100644
+index ce40933cd7234f04b11c8a78ac597291911c7172..6ceb0d8389469fc1b210143cd3ad3455a9df29ac 100644
 --- a/ui/widgets/buttons.h
 +++ b/ui/widgets/buttons.h
-@@ -357,6 +357,8 @@ protected:
+@@ -358,6 +358,8 @@ protected:
  
  private:
  	void setText(TextWithEntities &&text);
 +	[[nodiscard]] QRect cardRect() const;
 +	[[nodiscard]] bool hasCardNeighbor(bool below) const;
  	[[nodiscard]] QRect toggleRect() const;
+ 	[[nodiscard]] int textAvailableWidth(int outerw) const;
  
- 	const style::SettingsButton &_st;
 diff --git a/ui/widgets/checkbox.cpp b/ui/widgets/checkbox.cpp
-index df0dc58..4245b31 100644
+index df0dc58fa6525aa733a9ee6978ec7ac7d44596f9..4245b31f2bf9b8cf899c880be3b4fbaf48eefdd4 100644
 --- a/ui/widgets/checkbox.cpp
 +++ b/ui/widgets/checkbox.cpp
 @@ -89,6 +89,49 @@ void ToggleView::paint(QPainter &p, int left, int top, int outerWidth) {
@@ -17929,7 +17944,7 @@ index df0dc58..4245b31 100644
  	if (!centered && _allowTextLines == 1) {
  		return result;
 diff --git a/ui/widgets/checkbox.h b/ui/widgets/checkbox.h
-index d351629..62fb1aa 100644
+index d3516297f4e9c7ada746344722f5440a5298f1c9..62fb1aa796e315bb226fb56bf357cdf0e22c8c68 100644
 --- a/ui/widgets/checkbox.h
 +++ b/ui/widgets/checkbox.h
 @@ -239,7 +239,7 @@ public:
@@ -17942,10 +17957,10 @@ index d351629..62fb1aa 100644
  
  	void updateCheck() {
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index d57ac56..6399873 100644
+index cf7b90d43d9250525c62572a13742b64efb770e7..f9fd8d3bad8623e59144ea9106b7a8017e6dd0c5 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
-@@ -2850,6 +2850,24 @@ bool InputField::heightAutoupdated() {
+@@ -2915,6 +2915,24 @@ bool InputField::heightAutoupdated() {
  		+ _additionalMargins.top()
  		+ _additionalMargins.bottom();
  	const auto newHeight = std::clamp(contentHeight, _minHeight, _maxHeight);
@@ -17970,7 +17985,7 @@ index d57ac56..6399873 100644
  	if (height() != newHeight) {
  		resize(width(), newHeight);
  		return true;
-@@ -2857,6 +2875,10 @@ bool InputField::heightAutoupdated() {
+@@ -2922,6 +2940,10 @@ bool InputField::heightAutoupdated() {
  	return false;
  }
  
@@ -17982,7 +17997,7 @@ index d57ac56..6399873 100644
  	if (heightAutoupdated()) {
  		_heightChanges.fire({});
 diff --git a/ui/widgets/fields/input_field.h b/ui/widgets/fields/input_field.h
-index abf6b4b..f1d3078 100644
+index e2b6ac0b4697076e6c70f2d5e9320fc9c6001b28..d1a742f77d8afdf0061115a18bd2d0870ac3a8a3 100644
 --- a/ui/widgets/fields/input_field.h
 +++ b/ui/widgets/fields/input_field.h
 @@ -220,6 +220,8 @@ public:
@@ -18005,7 +18020,7 @@ index abf6b4b..f1d3078 100644
  	bool _customUpDown = false;
  
 diff --git a/ui/widgets/inner_dropdown.cpp b/ui/widgets/inner_dropdown.cpp
-index 4476642..02ff8b3 100644
+index 447664205d733b3e4ace767ccf3dbe41e6c401c2..02ff8b31f51710498c0f118d63911a95339f5b61 100644
 --- a/ui/widgets/inner_dropdown.cpp
 +++ b/ui/widgets/inner_dropdown.cpp
 @@ -19,7 +19,7 @@ InnerDropdown::InnerDropdown(
@@ -18039,7 +18054,7 @@ index 4476642..02ff8b3 100644
  	}
  	hideChildren();
 diff --git a/ui/widgets/menu/menu_action.cpp b/ui/widgets/menu/menu_action.cpp
-index 4c16b67..068c37c 100644
+index 4c16b6721e10b4afc268686ee1cd197076816a66..068c37c12d16be7cf5593a4a32582a22c90928f2 100644
 --- a/ui/widgets/menu/menu_action.cpp
 +++ b/ui/widgets/menu/menu_action.cpp
 @@ -96,12 +96,18 @@ void Action::paintEvent(QPaintEvent *e) {
@@ -18083,7 +18098,7 @@ index 4c16b67..068c37c 100644
  	if (const auto icon = (selected ? _iconOver : _icon)) {
  		icon->paint(p, _st.itemIconPosition, width());
 diff --git a/ui/widgets/menu/menu_action.h b/ui/widgets/menu/menu_action.h
-index 2a2e689..b051a05 100644
+index 2a2e6890f5a87cbbcef37057beea29116794fb12..b051a05a7cd12de2f537a605901a3f3db7200ca2 100644
 --- a/ui/widgets/menu/menu_action.h
 +++ b/ui/widgets/menu/menu_action.h
 @@ -57,6 +57,7 @@ protected:
@@ -18095,7 +18110,7 @@ index 2a2e689..b051a05 100644
  
  private:
 diff --git a/ui/widgets/widgets.style b/ui/widgets/widgets.style
-index 8b8df7d..ba7a19f 100644
+index 8b8df7d77594ea6f813f4e040767344c899b8aae..ba7a19f9755a5e1887a4a5ca331bde79c101ac72 100644
 --- a/ui/widgets/widgets.style
 +++ b/ui/widgets/widgets.style
 @@ -130,6 +130,8 @@ Toggle {

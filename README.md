@@ -10,15 +10,15 @@ An unofficial Windows client for the Telegram messaging service, built on Telegr
 
 ## Install
 
-Download the Windows x64 ZIP from Releases, extract it to its own writable folder, and run `Telegram.exe`. The beta is unsigned. Each installation keeps its profile in `tdata` next to the executable. Keep that folder when updating MTW-Gram. Download newer betas from GitHub Releases.
+Download the Windows x64 ZIP from Releases, extract it to its own writable folder, and run `Telegram.exe`. The beta is unsigned. Each installation keeps its profile in `tdata` next to the executable. Builds with the GitHub updater can check for a release under **Settings → General → Check for updates**, download it, and install it on restart. For manual updates, keep the `tdata` folder.
 
 ## Build from source
 
-MTW-Gram uses C++ and Qt. Its changes live in two Git patches over pinned Telegram Desktop sources. Run these commands from the repository root in a Windows x64 Visual Studio Developer Command Prompt with MSVC 14.44, ATL, a Windows SDK, Git, and Python. Prepare the dependencies using the [upstream Windows build guide](https://github.com/telegramdesktop/tdesktop/blob/5ff615713d2178b8458e201778d23d7abe78db9b/docs/building-win.md).
+MTW-Gram uses C++ and Qt. Its changes live in two Git patches over Telegram Desktop 7.4.4. Run these commands from the repository root in a Windows x64 Visual Studio Developer Command Prompt with MSVC 14.44, ATL, a Windows SDK, Git, and Python. Prepare the dependencies using the [upstream Windows build guide](https://github.com/telegramdesktop/tdesktop/blob/bf4f714036f21c750d535dab199c811b3f9bfdd4/docs/building-win.md).
 
 ```bat
 git clone https://github.com/telegramdesktop/tdesktop.git refs/tdesktop
-git -C refs/tdesktop checkout --detach 5ff615713d2178b8458e201778d23d7abe78db9b
+git -C refs/tdesktop checkout --detach bf4f714036f21c750d535dab199c811b3f9bfdd4
 git -C refs/tdesktop submodule update --init --recursive
 git -C refs/tdesktop apply --binary ../../patches/tdesktop.patch
 git -C refs/tdesktop/Telegram/lib_ui apply --binary ../../../../patches/lib_ui.patch
