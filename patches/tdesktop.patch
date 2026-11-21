@@ -4189,7 +4189,7 @@ index 3e436f7087c3408cf06921031769eb27830a59af..5c429ee6612307c6c8c2b3202d5a6e5b
  	CrashReports::Finish();
 diff --git a/Telegram/SourceFiles/core/update_github.cpp b/Telegram/SourceFiles/core/update_github.cpp
 new file mode 100644
-index 0000000000000000000000000000000000000000..97c6c651bb7e62f6c9c92b1c886376aaf3939e14
+index 0000000000000000000000000000000000000000..95620304af8dd35027bdfa03de1b4ede5115faf7
 --- /dev/null
 +++ b/Telegram/SourceFiles/core/update_github.cpp
 @@ -0,0 +1,338 @@
@@ -4217,7 +4217,7 @@ index 0000000000000000000000000000000000000000..97c6c651bb7e62f6c9c92b1c886376aa
 +namespace Core::Updates {
 +namespace {
 +
-+constexpr auto kVersion = u"0.2.1-beta";
++constexpr auto kVersion = u"0.2.2-beta";
 +constexpr auto kApi = u"https://api.github.com/repos/Doffi4/MTW-Gram/releases?per_page=30";
 +constexpr auto kDownload = u"https://github.com/Doffi4/MTW-Gram/releases/download/";
 +constexpr auto kMaxArchive = 160 * 1024 * 1024;
@@ -9771,7 +9771,7 @@ index f19fce5e2f55878832ea0bd41fe225620fa9eb5d..7def9d3d3b18e1007ac0b4be552cddca
  		_testModeLabel->moveToRight(
  			skip + _settings->width() + skip,
 diff --git a/Telegram/SourceFiles/mainwidget.cpp b/Telegram/SourceFiles/mainwidget.cpp
-index 7374e835ef165f64603cf71e5fd87a223ef78c4a..6c30fd8b6122464d307add51b3774a942bc8d741 100644
+index 7374e835ef165f64603cf71e5fd87a223ef78c4a..c5ac4620a4fed8e2794d38b64352609044d68fa8 100644
 --- a/Telegram/SourceFiles/mainwidget.cpp
 +++ b/Telegram/SourceFiles/mainwidget.cpp
 @@ -50,9 +50,13 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
@@ -9864,10 +9864,11 @@ index 7374e835ef165f64603cf71e5fd87a223ef78c4a..6c30fd8b6122464d307add51b3774a94
  
  	setFocus(); // otherwise dialogs widget could be focused.
  
-@@ -2110,7 +2140,16 @@ void MainWidget::showNewSection(
+@@ -2110,7 +2140,17 @@ void MainWidget::showNewSection(
  		? _thirdSection
  		: _mainSection;
  	if (newThirdSection) {
++		_finishTabbedSectionClose = nullptr;
 +		_a_tabbedSectionReveal.stop();
  		_thirdSection = std::move(newThirdSection);
 +		if (revealTabbedSection) {
@@ -9881,7 +9882,7 @@ index 7374e835ef165f64603cf71e5fd87a223ef78c4a..6c30fd8b6122464d307add51b3774a94
  		_thirdSection->removeRequests(
  		) | rpl::on_next([=] {
  			destroyThirdSection();
-@@ -2125,6 +2164,15 @@ void MainWidget::showNewSection(
+@@ -2125,6 +2165,15 @@ void MainWidget::showNewSection(
  		updateControlsGeometry();
  	} else {
  		_mainSection = std::move(newMainSection);
@@ -9897,7 +9898,7 @@ index 7374e835ef165f64603cf71e5fd87a223ef78c4a..6c30fd8b6122464d307add51b3774a94
  		_history->finishAnimating();
  		_history->showHistory(PeerId(), MsgId());
  
-@@ -2145,7 +2193,9 @@ void MainWidget::showNewSection(
+@@ -2145,7 +2194,9 @@ void MainWidget::showNewSection(
  
  	if (animationParams) {
  		auto back = (params.way == SectionShow::Way::Backward);
@@ -9908,7 +9909,7 @@ index 7374e835ef165f64603cf71e5fd87a223ef78c4a..6c30fd8b6122464d307add51b3774a94
  			? Window::SlideDirection::FromBottom
  			: (back || settingSection->forceAnimateBack())
  			? Window::SlideDirection::FromLeft
-@@ -2441,6 +2491,9 @@ void MainWidget::orderWidgets() {
+@@ -2441,6 +2492,9 @@ void MainWidget::orderWidgets() {
  	if (_callTopBar) {
  		_callTopBar->raise();
  	}
@@ -9918,7 +9919,7 @@ index 7374e835ef165f64603cf71e5fd87a223ef78c4a..6c30fd8b6122464d307add51b3774a94
  	if (_sideShadow) {
  		_sideShadow->raise();
  	}
-@@ -2570,6 +2623,9 @@ void MainWidget::paintEvent(QPaintEvent *e) {
+@@ -2570,6 +2624,9 @@ void MainWidget::paintEvent(QPaintEvent *e) {
  	if (_showAnimation) {
  		auto p = QPainter(this);
  		_showAnimation->paintContents(p);
@@ -9928,7 +9929,7 @@ index 7374e835ef165f64603cf71e5fd87a223ef78c4a..6c30fd8b6122464d307add51b3774a94
  	}
  }
  
-@@ -2681,6 +2737,9 @@ void MainWidget::resizeEvent(QResizeEvent *e) {
+@@ -2681,6 +2738,9 @@ void MainWidget::resizeEvent(QResizeEvent *e) {
  }
  
  void MainWidget::updateMainSectionShown() {
@@ -9938,15 +9939,16 @@ index 7374e835ef165f64603cf71e5fd87a223ef78c4a..6c30fd8b6122464d307add51b3774a94
  	_controller->setMainSectionShown(_mainSection || _history->peer());
  }
  
-@@ -2700,6 +2759,7 @@ void MainWidget::updateControlsGeometry() {
+@@ -2700,6 +2760,8 @@ void MainWidget::updateControlsGeometry() {
  	}
  	if (isThreeColumn()) {
  		if (!_thirdSection
 +			&& !_openingTabbedSection
++			&& !_finishTabbedSectionClose
  			&& !_controller->takeThirdSectionFromLayer()) {
  			auto params = Window::SectionShow(
  				Window::SectionShow::Way::ClearStack,
-@@ -2768,14 +2828,20 @@ void MainWidget::updateControlsGeometry() {
+@@ -2768,14 +2830,20 @@ void MainWidget::updateControlsGeometry() {
  			mainSectionGeometry,
  			_contentScrollAddToY);
  		if (_hider) _hider->setGeometry(0, 0, dialogsWidth, height());
@@ -9969,7 +9971,7 @@ index 7374e835ef165f64603cf71e5fd87a223ef78c4a..6c30fd8b6122464d307add51b3774a94
  				height() - thirdSectionTop);
  		}
  		const auto shadowTop = _controller->window().verticalShadowTop();
-@@ -2784,13 +2850,24 @@ void MainWidget::updateControlsGeometry() {
+@@ -2784,13 +2852,24 @@ void MainWidget::updateControlsGeometry() {
  			accumulate_min(
  				dialogsWidth,
  				width() - st::columnMinimalWidthMain);
@@ -9996,15 +9998,49 @@ index 7374e835ef165f64603cf71e5fd87a223ef78c4a..6c30fd8b6122464d307add51b3774a94
  				shadowHeight);
  		}
  		if (_thirdShadow) {
-@@ -2852,6 +2929,7 @@ void MainWidget::updateControlsGeometry() {
+@@ -2851,7 +2930,41 @@ void MainWidget::updateControlsGeometry() {
+ 	floatPlayerUpdatePositions();
  }
  
++bool MainWidget::hideTabbedSelectorSectionAnimated(Fn<void()> finish) {
++	if (_finishTabbedSectionClose) {
++		return true;
++	}
++	if (_showAnimation
++		|| anim::Disabled()
++		|| !_thirdSection
++		|| !_thirdSection->isVisible()
++		|| !dynamic_cast<ChatHelpers::TabbedSection*>(_thirdSection.data())) {
++		return false;
++	}
++	const auto from = _a_tabbedSectionReveal.value(1.);
++	if (from <= 0.) {
++		return false;
++	}
++	_finishTabbedSectionClose = std::move(finish);
++	_a_tabbedSectionReveal.start(
++		[this](float64 progress) {
++			if (progress > 0.) {
++				updateControlsGeometry();
++			} else if (auto finish = base::take(_finishTabbedSectionClose)) {
++				finish();
++			}
++		},
++		from,
++		0.,
++		300,
++		anim::cubicBezier(0.25, 0.8, 0.25, 1.0));
++	return true;
++}
++
  void MainWidget::destroyThirdSection() {
-+	_a_tabbedSectionReveal.stop();
++	if (!_finishTabbedSectionClose) {
++		_a_tabbedSectionReveal.stop();
++	}
  	if (const auto strong = _thirdSection.data()) {
  		if (Ui::InFocusChain(strong)) {
  			setFocus();
-@@ -2860,6 +2938,36 @@ void MainWidget::destroyThirdSection() {
+@@ -2860,6 +2973,36 @@ void MainWidget::destroyThirdSection() {
  	_thirdSection.destroy();
  }
  
@@ -10041,7 +10077,7 @@ index 7374e835ef165f64603cf71e5fd87a223ef78c4a..6c30fd8b6122464d307add51b3774a94
  void MainWidget::refreshResizeAreas() {
  	if (!isOneColumn() && _dialogs) {
  		ensureFirstColumnResizeAreaCreated();
-@@ -2872,7 +2980,9 @@ void MainWidget::refreshResizeAreas() {
+@@ -2872,7 +3015,9 @@ void MainWidget::refreshResizeAreas() {
  		_firstColumnResizeArea.destroy();
  	}
  
@@ -10052,7 +10088,7 @@ index 7374e835ef165f64603cf71e5fd87a223ef78c4a..6c30fd8b6122464d307add51b3774a94
  		ensureThirdColumnResizeAreaCreated();
  		_thirdColumnResizeArea->setGeometryToLeft(
  			_thirdSection->x(),
-@@ -2906,7 +3016,7 @@ void MainWidget::ensureFirstColumnResizeAreaCreated() {
+@@ -2906,7 +3051,7 @@ void MainWidget::ensureFirstColumnResizeAreaCreated() {
  	}
  	auto moveLeftCallback = [=](int globalLeft) {
  		const auto newWidth = globalLeft - mapToGlobal(QPoint(0, 0)).x();
@@ -10061,7 +10097,7 @@ index 7374e835ef165f64603cf71e5fd87a223ef78c4a..6c30fd8b6122464d307add51b3774a94
  			? 0.
  			: float64(newWidth) / width();
  		const auto nochat = !_controller->mainSectionShown();
-@@ -3227,7 +3337,8 @@ void MainWidget::updateWindowAdaptiveLayout() {
+@@ -3227,7 +3372,8 @@ void MainWidget::updateWindowAdaptiveLayout() {
  
  	_controller->columns().updateDialogsWidthRatio(dialogsWidthRatio, nochat);
  
@@ -10072,10 +10108,18 @@ index 7374e835ef165f64603cf71e5fd87a223ef78c4a..6c30fd8b6122464d307add51b3774a94
  		&& !_controller->chatsForceDisplayWide();
  	_dialogsWidth = !_dialogs
 diff --git a/Telegram/SourceFiles/mainwidget.h b/Telegram/SourceFiles/mainwidget.h
-index 9a2f93f2660165899e8d4da0d6fe5727a5c60d75..b9488a270d05ab9ab37433aaa3a76417b0371b8c 100644
+index 9a2f93f2660165899e8d4da0d6fe5727a5c60d75..e3baa2ba8a061edec9d72f8cbb5f2b3c13ac1ee7 100644
 --- a/Telegram/SourceFiles/mainwidget.h
 +++ b/Telegram/SourceFiles/mainwidget.h
-@@ -316,6 +316,7 @@ private:
+@@ -143,6 +143,7 @@ public:
+ 		std::shared_ptr<Window::SectionMemento> memento,
+ 		const SectionShow &params);
+ 	void updateColumnLayout();
++	bool hideTabbedSelectorSectionAnimated(Fn<void()> finish);
+ 	void columnsRestored();
+ 	bool stackIsEmpty() const;
+ 	[[nodiscard]] std::vector<Window::SavedChat> chatStackForSave() const;
+@@ -316,6 +317,7 @@ private:
  		not_null<const HistoryItem*> item) override;
  
  	void refreshResizeAreas();
@@ -10083,11 +10127,12 @@ index 9a2f93f2660165899e8d4da0d6fe5727a5c60d75..b9488a270d05ab9ab37433aaa3a76417
  	template <typename MoveCallback, typename FinishCallback>
  	void createResizeArea(
  		object_ptr<Ui::ResizeArea> &area,
-@@ -348,15 +349,19 @@ private:
+@@ -348,15 +350,20 @@ private:
  	int _dialogsWidth = 0;
  	int _thirdColumnWidth = 0;
  	Ui::Animations::Simple _a_dialogsWidth;
 +	Ui::Animations::Simple _a_tabbedSectionReveal;
++	Fn<void()> _finishTabbedSectionClose;
  
  	const base::unique_qptr<Dialogs::Widget> _dialogs;
  	const base::unique_qptr<HistoryWidget> _history;
@@ -12342,7 +12387,7 @@ index a91951fc42761db61f7f7718f89e226fc9d3b5c2..fb05d511f91863c35dcd3b92f1f5f699
  	style: defaultTextStyle;
  	textMargins: margins(8px, 8px, 8px, 6px);
 diff --git a/Telegram/SourceFiles/window/window_session_controller.cpp b/Telegram/SourceFiles/window/window_session_controller.cpp
-index 8d30d559c6b49f236513e92fe3dcc27e0a6816ff..15974bfb6d07ca76d65043e7bd31d64ed641671a 100644
+index 8d30d559c6b49f236513e92fe3dcc27e0a6816ff..df73733a24bbd5d3861e0c407bf121bf6f7389c2 100644
 --- a/Telegram/SourceFiles/window/window_session_controller.cpp
 +++ b/Telegram/SourceFiles/window/window_session_controller.cpp
 @@ -2798,9 +2798,7 @@ void SessionController::floatPlayerAreaUpdated() {
@@ -12356,6 +12401,75 @@ index 8d30d559c6b49f236513e92fe3dcc27e0a6816ff..15974bfb6d07ca76d65043e7bd31d64e
  }
  
  int SessionController::minimalThreeColumnWidth() const {
+@@ -2975,34 +2973,40 @@ void SessionController::resizeForThirdSection() {
+ }
+ 
+ void SessionController::closeThirdSection() {
+-	auto newWindowSize = widget()->size();
+-	auto layout = computeColumnLayout();
+-	if (layout.windowLayout == Adaptive::WindowLayout::ThreeColumn) {
+-		const auto nochat = !mainSectionShown();
+-		auto noResize = widget()->isFullScreen()
+-			|| widget()->isMaximized();
+-		auto savedValue = columns().thirdSectionExtendedBy();
+-		auto extendedBy = (savedValue == -1)
+-			? layout.thirdWidth
+-			: savedValue;
+-		auto newBodyWidth = noResize
+-			? layout.bodyWidth
+-			: (layout.bodyWidth - extendedBy);
+-		auto currentRatio = columns().dialogsWidthRatio(nochat);
+-		columns().updateDialogsWidthRatio(
+-			(currentRatio * layout.bodyWidth) / newBodyWidth,
+-			nochat);
+-		newWindowSize = QSize(
+-			widget()->width() + (newBodyWidth - layout.bodyWidth),
+-			widget()->height());
+-	}
+-	columns().setTabbedSelectorSectionEnabled(false);
+-	columns().setThirdSectionInfoEnabled(false);
+-	Core::App().saveSettingsDelayed();
+-	if (widget()->size() != newWindowSize) {
+-		widget()->resize(newWindowSize);
+-	} else {
+-		updateColumnLayout();
++	const auto close = [this] {
++		auto newWindowSize = widget()->size();
++		auto layout = computeColumnLayout();
++		if (layout.windowLayout == Adaptive::WindowLayout::ThreeColumn) {
++			const auto nochat = !mainSectionShown();
++			auto noResize = widget()->isFullScreen()
++				|| widget()->isMaximized();
++			auto savedValue = columns().thirdSectionExtendedBy();
++			auto extendedBy = (savedValue == -1)
++				? layout.thirdWidth
++				: savedValue;
++			auto newBodyWidth = noResize
++				? layout.bodyWidth
++				: (layout.bodyWidth - extendedBy);
++			auto currentRatio = columns().dialogsWidthRatio(nochat);
++			columns().updateDialogsWidthRatio(
++				(currentRatio * layout.bodyWidth) / newBodyWidth,
++				nochat);
++			newWindowSize = QSize(
++				widget()->width() + (newBodyWidth - layout.bodyWidth),
++				widget()->height());
++		}
++		columns().setTabbedSelectorSectionEnabled(false);
++		columns().setThirdSectionInfoEnabled(false);
++		Core::App().saveSettingsDelayed();
++		if (widget()->size() != newWindowSize) {
++			widget()->resize(newWindowSize);
++		} else {
++			updateColumnLayout();
++		}
++	};
++	const auto content = widget()->sessionContent();
++	if (!content || !content->hideTabbedSelectorSectionAnimated(close)) {
++		close();
+ 	}
+ }
+ 
 diff --git a/Telegram/SourceFiles/window/window_slide_animation.cpp b/Telegram/SourceFiles/window/window_slide_animation.cpp
 index ba81079f2d96bcfb8f4da64aaff9a14ecf81ce88..ed7f3c2fadade73a6b314e5a6b7d41eb426a3b89 100644
 --- a/Telegram/SourceFiles/window/window_slide_animation.cpp

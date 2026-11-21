@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.2-beta
+
+- Restored the slide-out animation when closing the emoji, sticker, and GIF sidebar.
+
 ## 0.2.1-beta
 
 ### Changed

@@ -1,4 +1,4 @@
-"""Guard the S13 selector layout and sidebar entrance."""
+"""Guard the S13 selector layout and sidebar transitions."""
 from pathlib import Path
 import unittest
 
@@ -6,6 +6,8 @@ import unittest
 SOURCE_DIR = Path(__file__).resolve().parents[1] / "refs/tdesktop/Telegram/SourceFiles"
 SOURCE = (SOURCE_DIR / "chat_helpers/tabbed_selector.cpp").read_text(encoding="utf-8")
 MAIN = (SOURCE_DIR / "mainwidget.cpp").read_text(encoding="utf-8")
+CONTROLLER = (SOURCE_DIR / "window/window_session_controller.cpp").read_text(
+    encoding="utf-8")
 
 
 class EntertainmentPanel(unittest.TestCase):
@@ -26,6 +28,20 @@ class EntertainmentPanel(unittest.TestCase):
                       "\t\t\t\t_thirdColumnWidth,", MAIN)
         self.assertIn("- dialogsWidth\n\t\t\t- thirdSectionWidth;", MAIN)
 
+
+    def test_sidebar_closes_after_sliding_out(self):
+        close = CONTROLLER.split("void SessionController::closeThirdSection() {", 1)[1]
+        close = close.split("void SessionController::showPeer(", 1)[0]
+        self.assertIn("hideTabbedSelectorSectionAnimated(close)", close)
+        self.assertIn("if (!content", close)
+        slide = MAIN.split("bool MainWidget::hideTabbedSelectorSectionAnimated", 1)[1]
+        slide = slide.split("void MainWidget::", 1)[0]
+        self.assertIn("_a_tabbedSectionReveal.value(1.)", slide)
+        self.assertIn("from,\n\t\t0.,", slide)
+        self.assertIn("else if (auto finish = base::take(_finishTabbedSectionClose))", slide)
+        self.assertIn("if (progress > 0.) {\n\t\t\t\tupdateControlsGeometry();", slide)
+        self.assertIn("&& !_finishTabbedSectionClose", MAIN)
+        self.assertIn("if (newThirdSection) {\n\t\t_finishTabbedSectionClose = nullptr;", MAIN)
 
     def test_manual_sidebar_show_suppresses_instant_layout_restore(self):
         show = MAIN.split("void MainWidget::showSection(", 1)[1]
