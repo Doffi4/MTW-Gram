@@ -17956,6 +17956,137 @@ index d3516297f4e9c7ada746344722f5440a5298f1c9..62fb1aa796e315bb226fb56bf357cdf0
  	}
  
  	void updateCheck() {
+diff --git a/ui/widgets/elastic_scroll.cpp b/ui/widgets/elastic_scroll.cpp
+index f72ffc506905e9e4964bb46f68a3e6f15f0e4350..c68b9022f7ce61c84baa4b1aa76ea82f2772b023 100644
+--- a/ui/widgets/elastic_scroll.cpp
++++ b/ui/widgets/elastic_scroll.cpp
+@@ -385,6 +385,7 @@ ElasticScroll::ElasticScroll(
+ 
+ 	_bar->visibleFromDragged(
+ 	) | rpl::on_next([=](int from) {
++		_smoothWheelAnimation.stop();
+ 		tryScrollTo(from, false);
+ 	}, _bar->lifetime());
+ }
+@@ -855,6 +856,16 @@ bool ElasticScroll::handleWheelEvent(
+ 	const auto touch = (source != WheelSource::Wheel);
+ 	const auto exact = (source == WheelSource::ExactTouch);
+ 	const auto phase = e->phase();
++	const auto smoothWheel = (phase == Qt::NoScrollPhase)
++		&& (source == WheelSource::Wheel)
++		&& (e->deviceType() != QInputDevice::DeviceType::TouchPad)
++		&& e->pixelDelta().isNull()
++		&& !anim::Disabled()
++		&& _smoothWheelEnabled
++		&& _smoothWheelEnabled();
++	if (!smoothWheel) {
++		_smoothWheelAnimation.stop();
++	}
+ 	auto ownAxisLocked = false;
+ 	if (_wheelDirectionLocked || _crossAxisWheelProcess) {
+ 		const auto lockDelta = exact
+@@ -922,7 +933,28 @@ bool ElasticScroll::handleWheelEvent(
+ 			if (!weak) {
+ 				return true;
+ 			}
+-			tryScrollTo(_state.visibleFrom + delta);
++			if (smoothWheel && delta && !_disabled && _widget) {
++				const auto from = _state.visibleFrom;
++				const auto pending = _smoothWheelTarget - from;
++				const auto start = (_smoothWheelAnimation.animating()
++					&& !base::OppositeSigns(pending, delta))
++					? _smoothWheelTarget
++					: from;
++				_smoothWheelTarget = willScrollTo(start + delta);
++				_smoothWheelAnimation.stop();
++				if (from != _smoothWheelTarget) {
++					_smoothWheelAnimation.start([=](float64 position) {
++						if (!isVisible() || !_smoothWheelEnabled()) {
++							_smoothWheelAnimation.stop();
++							return;
++						}
++						_lastScroll = crl::now();
++						tryScrollTo(int(base::SafeRound(position)));
++					}, from, _smoothWheelTarget, 150, anim::macEaseOut);
++				}
++			} else {
++				tryScrollTo(_state.visibleFrom + delta);
++			}
+ 			_movement = Movement::None;
+ 		} else if (!_overscrollReturnAnimation.animating()) {
+ 			overscrollReturn();
+@@ -1346,6 +1378,7 @@ void ElasticScroll::touchScrollFinish(bool cancelled) {
+ }
+ 
+ void ElasticScroll::disableScroll(bool dis) {
++	_smoothWheelAnimation.stop();
+ 	_disabled = dis;
+ 	if (_disabled && _st.hiding) {
+ 		_bar->toggle(false);
+@@ -1605,6 +1638,7 @@ void ElasticScroll::keyPressEvent(QKeyEvent *e) {
+ 		|| key == Qt::Key_Down
+ 		|| key == Qt::Key_PageUp
+ 		|| key == Qt::Key_PageDown) {
++		_smoothWheelAnimation.stop();
+ 		const auto up = (key == Qt::Key_Up) || (key == Qt::Key_PageUp);
+ 		const auto step = (key == Qt::Key_Up || key == Qt::Key_Down)
+ 			? style::ConvertScale(20)
+@@ -1618,6 +1652,7 @@ void ElasticScroll::keyPressEvent(QKeyEvent *e) {
+ 		}
+ 		tryScrollTo(_state.visibleFrom + (up ? -step : step));
+ 	} else if (key == Qt::Key_Home || key == Qt::Key_End) {
++		_smoothWheelAnimation.stop();
+ 		tryScrollTo((key == Qt::Key_Home) ? 0 : scrollTopMax());
+ 	} else {
+ 		// Let keys we don't handle (e.g. typed characters) propagate to
+@@ -1677,6 +1712,7 @@ int ElasticScroll::computeScrollToY(int toTop, int toBottom) {
+ }
+ 
+ void ElasticScroll::scrollTo(int toFrom, int toTill) {
++	_smoothWheelAnimation.stop();
+ 	if (const auto inner = _widget.data()) {
+ 		SendPendingMoveResizeEvents(inner);
+ 	}
+@@ -1712,6 +1748,7 @@ void ElasticScroll::scrollTo(int toFrom, int toTill) {
+ }
+ 
+ void ElasticScroll::doSetOwnedWidget(object_ptr<QWidget> w) {
++	_smoothWheelAnimation.stop();
+ 	_touchOwnerGesture = false;
+ 	constexpr auto attribute = Qt::WA_AcceptTouchEvents;
+ 	if (_widget) {
+@@ -1740,6 +1777,7 @@ void ElasticScroll::doSetOwnedWidget(object_ptr<QWidget> w) {
+ }
+ 
+ object_ptr<QWidget> ElasticScroll::doTakeWidget() {
++	_smoothWheelAnimation.stop();
+ 	return std::move(_widget);
+ }
+ 
+diff --git a/ui/widgets/elastic_scroll.h b/ui/widgets/elastic_scroll.h
+index f0ba4d9a200b6bfcbbfedcffadf04fa192d97c41..eb3920a181e00fbbb3edf455a97feaa75f51fa68 100644
+--- a/ui/widgets/elastic_scroll.h
++++ b/ui/widgets/elastic_scroll.h
+@@ -170,6 +170,9 @@ public:
+ 	void disableScroll(bool dis);
+ 	void innerResized();
+ 
++	void setSmoothWheelEnabled(Fn<bool()> enabled) {
++		_smoothWheelEnabled = std::move(enabled);
++	}
+ 	void setCustomWheelProcess(Fn<bool(not_null<QWheelEvent*>)> process) {
+ 		_customWheelProcess = std::move(process);
+ 	}
+@@ -388,6 +391,9 @@ private:
+ 	Fn<bool()> _bottomContentRequest;
+ 	std::optional<QColor> _overscrollBg;
+ 	Ui::Animations::Simple _overscrollReturnAnimation;
++	Ui::Animations::Simple _smoothWheelAnimation;
++	Fn<bool()> _smoothWheelEnabled;
++	int _smoothWheelTarget = 0;
+ 	rpl::variable<Position> _position;
+ 	rpl::variable<Movement> _movement;
+ 
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
 index cf7b90d43d9250525c62572a13742b64efb770e7..f9fd8d3bad8623e59144ea9106b7a8017e6dd0c5 100644
 --- a/ui/widgets/fields/input_field.cpp

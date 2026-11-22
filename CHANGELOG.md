@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.4-beta
+
+- Aligned the option cards in chat folder settings.
+- Added a fade when returning from Settings to Chats and when switching between open chats.
+- Added optional smooth mouse wheel scrolling in Chat Settings, off by default.
+
 ## 0.2.3-beta
 
 - Smoothed the chat list transition when opening and closing forum topics.

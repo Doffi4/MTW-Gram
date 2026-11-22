@@ -4137,10 +4137,19 @@ index 9acfda61e07a5e0d6ba3bade17299171b5c58177..2da27ed17022a003993acd47ac53b7f2
  	_pullToNextChannel = true;
  	_quickDialogAction = Dialogs::Ui::QuickDialogAction::Disabled;
 diff --git a/Telegram/SourceFiles/core/core_settings.h b/Telegram/SourceFiles/core/core_settings.h
-index 695ab31467301649fb69eb1d0167f33ac290a9fc..160a750f3694f46b6fd7c0d32753e866b8634504 100644
+index 695ab31467301649fb69eb1d0167f33ac290a9fc..18343dd22c7a7237ca8c91f21796c581fe103ba0 100644
 --- a/Telegram/SourceFiles/core/core_settings.h
 +++ b/Telegram/SourceFiles/core/core_settings.h
-@@ -1189,7 +1189,7 @@ private:
+@@ -37,6 +37,8 @@ enum class StickedTooltip;
+ 
+ namespace Core {
+ 
++inline constexpr auto kSmoothChatWheelKey = "mtw.smoothChatWheel";
++
+ inline constexpr auto kScreenReaderModeDisabledKey
+ 	= "screen-reader-mode-disabled"_cs;
+ 
+@@ -1189,7 +1191,7 @@ private:
  	QByteArray _tonsiteStorageToken;
  	rpl::variable<int> _ivZoom = 0;
  	Media::VideoQuality _videoQuality;
@@ -4189,7 +4198,7 @@ index 3e436f7087c3408cf06921031769eb27830a59af..5c429ee6612307c6c8c2b3202d5a6e5b
  	CrashReports::Finish();
 diff --git a/Telegram/SourceFiles/core/update_github.cpp b/Telegram/SourceFiles/core/update_github.cpp
 new file mode 100644
-index 0000000000000000000000000000000000000000..34a7fa9a06591d01d2117b80e44743ccbb6119c1
+index 0000000000000000000000000000000000000000..6f68ac09d23ff162dee94f09bcb54c639fe2cad3
 --- /dev/null
 +++ b/Telegram/SourceFiles/core/update_github.cpp
 @@ -0,0 +1,338 @@
@@ -4217,7 +4226,7 @@ index 0000000000000000000000000000000000000000..34a7fa9a06591d01d2117b80e44743cc
 +namespace Core::Updates {
 +namespace {
 +
-+constexpr auto kVersion = u"0.2.3-beta";
++constexpr auto kVersion = u"0.2.4-beta";
 +constexpr auto kApi = u"https://api.github.com/repos/Doffi4/MTW-Gram/releases?per_page=30";
 +constexpr auto kDownload = u"https://github.com/Doffi4/MTW-Gram/releases/download/";
 +constexpr auto kMaxArchive = 160 * 1024 * 1024;
@@ -5759,7 +5768,7 @@ index 46fd8e20cb1d20dbb74a46054e138b4861e75cbc..94bb6c244733cfc10bffca74e0563242
  			? _suggestions->tabsHeight()
  			: 0;
 diff --git a/Telegram/SourceFiles/dialogs/dialogs_widget.h b/Telegram/SourceFiles/dialogs/dialogs_widget.h
-index 49037af7e23991c40a17f573605f4cca986ceaa8..9f715fc113b7100229dcf630acaefd0c957daa9b 100644
+index 49037af7e23991c40a17f573605f4cca986ceaa8..b542c5de14e58c3796f30bf78ac1b2c25b2cb1e4 100644
 --- a/Telegram/SourceFiles/dialogs/dialogs_widget.h
 +++ b/Telegram/SourceFiles/dialogs/dialogs_widget.h
 @@ -6,6 +6,7 @@ For license and copyright information please follow this link:
@@ -5786,15 +5795,18 @@ index 49037af7e23991c40a17f573605f4cca986ceaa8..9f715fc113b7100229dcf630acaefd0c
  class JumpDownButton;
  class ElasticScroll;
  template <typename Widget>
-@@ -93,6 +96,7 @@ enum class HashOrCashtag : uchar;
+@@ -93,6 +96,10 @@ enum class HashOrCashtag : uchar;
  
  class Widget final : public Window::AbstractSectionWidget {
  public:
 +	void setSettingsPage(::Settings::Type page);
++	[[nodiscard]] bool hasSettingsPage() const {
++		return bool(_settingsPage.current());
++	}
  	enum class Layout {
  		Main,
  		Child,
-@@ -131,7 +135,6 @@ public:
+@@ -131,7 +138,6 @@ public:
  		Window::SlideDirection direction,
  		const Window::SectionSlideParams &params);
  	void showFast();
@@ -5802,7 +5814,7 @@ index 49037af7e23991c40a17f573605f4cca986ceaa8..9f715fc113b7100229dcf630acaefd0c
  
  	void scrollToEntry(const RowDescriptor &entry);
  
-@@ -212,6 +215,8 @@ private:
+@@ -212,6 +218,8 @@ private:
  	void setupFrozenAccountBar();
  	void setupConnectingWidget();
  	void setupMainMenuToggle();
@@ -5811,7 +5823,7 @@ index 49037af7e23991c40a17f573605f4cca986ceaa8..9f715fc113b7100229dcf630acaefd0c
  	void setupMoreChatsBar();
  	void switchToChatsFilter(FilterId id);
  	[[nodiscard]] QPixmap grabForChatsFilterSlide();
-@@ -273,7 +278,7 @@ private:
+@@ -273,7 +281,7 @@ private:
  		Data::CommunityInfo *community,
  		anim::type animated);
  	void hideChildList();
@@ -5820,7 +5832,7 @@ index 49037af7e23991c40a17f573605f4cca986ceaa8..9f715fc113b7100229dcf630acaefd0c
  	[[nodiscard]] QPixmap grabForFolderSlideAnimation();
  	void startSlideAnimation(
  		QPixmap oldContentCache,
-@@ -349,6 +354,16 @@ private:
+@@ -349,6 +357,16 @@ private:
  	object_ptr<Ui::FadeWrapScaled<Ui::IconButton>> _jumpToDate;
  	object_ptr<Ui::CrossButton> _cancelSearch;
  	object_ptr<Ui::FadeWrapScaled<Ui::IconButton>> _lockUnlock;
@@ -5837,7 +5849,7 @@ index 49037af7e23991c40a17f573605f4cca986ceaa8..9f715fc113b7100229dcf630acaefd0c
  
  	std::unique_ptr<Ui::MoreChatsBar> _moreChatsBar;
  
-@@ -389,7 +404,6 @@ private:
+@@ -389,7 +407,6 @@ private:
  	Ui::Animations::Simple _scrollToAnimation;
  	int _scrollAnimationTo = 0;
  	std::unique_ptr<Window::SlideAnimation> _showAnimation;
@@ -5845,7 +5857,7 @@ index 49037af7e23991c40a17f573605f4cca986ceaa8..9f715fc113b7100229dcf630acaefd0c
  
  	Ui::Animations::Simple _scrollToTopShown;
  	object_ptr<Ui::JumpDownButton> _scrollToTop;
-@@ -464,7 +478,7 @@ private:
+@@ -464,7 +481,7 @@ private:
  	rpl::variable<float64> _childListShown;
  	rpl::variable<PeerId> _childListPeerId;
  	bool _childListPostponed = false;
@@ -6204,7 +6216,7 @@ index 35107cad8bb4999449f0ca2c3ac6314077082a53..eb97ca9705ba57a98907f293089067a2
  	Ui::PeerUserpicView _forumThreadBarUserpicView;
  
 diff --git a/Telegram/SourceFiles/history/history_widget.cpp b/Telegram/SourceFiles/history/history_widget.cpp
-index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a8595646b2f5eb 100644
+index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..35028a3dfea84116421df9136528075e728eb7d3 100644
 --- a/Telegram/SourceFiles/history/history_widget.cpp
 +++ b/Telegram/SourceFiles/history/history_widget.cpp
 @@ -238,6 +238,7 @@ constexpr auto kDisplayEditTimeWarningMs = 300 * 1000;
@@ -6215,7 +6227,17 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  constexpr auto kSaveCloudDraftIdleTimeout = 14 * crl::time(1000);
  constexpr auto kRefreshSlowmodeLabelTimeout = crl::time(200);
  constexpr auto kCommonModifiers = 0
-@@ -539,17 +540,17 @@ HistoryWidget::HistoryWidget(
+@@ -397,6 +398,9 @@ HistoryWidget::HistoryWidget(
+ 		update();
+ 	}, lifetime());
+ 
++	_scroll->setSmoothWheelEnabled([] {
++		return Core::App().settings().readPref<bool>(Core::kSmoothChatWheelKey);
++	});
+ 	_scroll->setHandleTouch(false);
+ 	_scroll->lockWheelDirection();
+ 	const auto crossAxis = [=](QPoint delta, Qt::ScrollPhase phase) {
+@@ -539,17 +543,17 @@ HistoryWidget::HistoryWidget(
  	initTabbedSelector();
  
  	_attachToggle->setClickedCallback([=] {
@@ -6241,7 +6263,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  	});
  
  	const auto rawTextEdit = _field->rawTextEdit().get();
-@@ -588,6 +589,7 @@ HistoryWidget::HistoryWidget(
+@@ -588,6 +592,7 @@ HistoryWidget::HistoryWidget(
  		return false;
  	});
  	InitMessageFieldFade(_field, st::historyComposeField.textBg);
@@ -6249,7 +6271,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  
  	setupFastButtonMode();
  	initAiButton();
-@@ -1132,7 +1134,7 @@ HistoryWidget::HistoryWidget(
+@@ -1132,7 +1137,7 @@ HistoryWidget::HistoryWidget(
  			if (top >= 0) {
  				auto scrollTop = _scroll->scrollTop();
  				if (top + view->height() > scrollTop
@@ -6258,7 +6280,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  					*query.isVisible = true;
  				}
  			}
-@@ -1235,6 +1237,24 @@ HistoryWidget::HistoryWidget(
+@@ -1235,6 +1240,24 @@ HistoryWidget::HistoryWidget(
  
  	setupScheduledToggle();
  	setupSendAsToggle();
@@ -6283,7 +6305,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  	orderWidgets();
  	setupComposeStash();
  	setupShortcuts();
-@@ -1459,6 +1479,7 @@ void HistoryWidget::initVoiceRecordBar() {
+@@ -1459,6 +1482,7 @@ void HistoryWidget::initVoiceRecordBar() {
  	_voiceRecordBar->recordingStateChanges(
  	) | rpl::on_next([=](bool active) {
  		_field->setDisabled(active);
@@ -6291,7 +6313,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  		controller()->widget()->setInnerFocus();
  		updateAiButtonVisibility();
  		updateSendAsFileVisibility();
-@@ -1690,11 +1711,7 @@ void HistoryWidget::initTabbedSelector() {
+@@ -1690,11 +1714,7 @@ void HistoryWidget::initTabbedSelector() {
  	refreshTabbedPanel();
  
  	_tabbedSelectorToggle->addClickHandler([=] {
@@ -6304,7 +6326,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  	});
  
  	const auto selector = controller()->tabbedSelector();
-@@ -2222,6 +2239,7 @@ void HistoryWidget::applyInlineBotQuery(UserData *bot, const QString &query) {
+@@ -2222,6 +2242,7 @@ void HistoryWidget::applyInlineBotQuery(UserData *bot, const QString &query) {
  }
  
  void HistoryWidget::orderWidgets() {
@@ -6312,7 +6334,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  	_voiceRecordBar->raise();
  	_send->raise();
  	_aiButton->raise();
-@@ -3751,8 +3769,6 @@ void HistoryWidget::setHistory(History *history) {
+@@ -3751,8 +3772,6 @@ void HistoryWidget::setHistory(History *history) {
  	if (was && !now) {
  		_attachToggle->removeEventFilter(_attachBotsMenu.get());
  		_attachBotsMenu->hideFast();
@@ -6321,7 +6343,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  	}
  
  	const auto unloadHeavyViewParts = [](History *history) {
-@@ -3837,6 +3853,7 @@ void HistoryWidget::refreshAttachBotsMenu() {
+@@ -3837,6 +3856,7 @@ void HistoryWidget::refreshAttachBotsMenu() {
  	if (!_history) {
  		return;
  	}
@@ -6329,7 +6351,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  	_attachBotsMenu = InlineBots::MakeAttachBotsMenu(
  		this,
  		controller(),
-@@ -3844,6 +3861,11 @@ void HistoryWidget::refreshAttachBotsMenu() {
+@@ -3844,6 +3864,11 @@ void HistoryWidget::refreshAttachBotsMenu() {
  		[=] { return prepareSendAction({}); },
  		[=] { return sendMenuDetails(); },
  		[=](bool compress) { chooseAttach(compress); },
@@ -6341,7 +6363,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  		crl::guard(this, [=] {
  			return _field->getTextWithAppliedMarkdown();
  		}),
-@@ -3855,9 +3877,7 @@ void HistoryWidget::refreshAttachBotsMenu() {
+@@ -3855,9 +3880,7 @@ void HistoryWidget::refreshAttachBotsMenu() {
  	}
  	_attachBotsMenu->setOrigin(
  		Ui::PanelAnimation::Origin::BottomLeft);
@@ -6352,7 +6374,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  	_attachBotsMenu->heightValue(
  	) | rpl::on_next([=] {
  		moveFieldControls();
-@@ -4768,7 +4788,7 @@ void HistoryWidget::maybeMarkReactionsRead(not_null<HistoryItem*> item) {
+@@ -4768,7 +4791,7 @@ void HistoryWidget::maybeMarkReactionsRead(not_null<HistoryItem*> item) {
  	const auto reactionCenter
  		= view->reactionButtonParameters({}, {}).center.y();
  	const auto visibleTop = _scroll->scrollTop();
@@ -6361,7 +6383,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  	if (itemTop + reactionCenter < visibleTop
  		|| itemTop + view->height() > visibleBottom) {
  		return;
-@@ -6647,10 +6667,11 @@ void HistoryWidget::mouseMoveEvent(QMouseEvent *e) {
+@@ -6647,10 +6670,11 @@ void HistoryWidget::mouseMoveEvent(QMouseEvent *e) {
  
  void HistoryWidget::updateOverStates(QPoint pos) {
  	const auto isReadyToForward = readyToForward();
@@ -6375,7 +6397,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  		st::historyReplyHeight);
  	const auto hasWebPage = !!_previewDrawPreview;
  	const auto inDetails = detailsRect.contains(pos)
-@@ -7456,6 +7477,9 @@ bool HistoryWidget::preventsClose(Fn<void()> &&continueCallback) const {
+@@ -7456,6 +7480,9 @@ bool HistoryWidget::preventsClose(Fn<void()> &&continueCallback) const {
  
  void HistoryWidget::toggleTabbedSelectorMode() {
  	if (!_history) {
@@ -6385,7 +6407,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  		return;
  	}
  	if (_tabbedPanel) {
-@@ -7682,7 +7706,7 @@ void HistoryWidget::moveFieldControls() {
+@@ -7682,7 +7709,7 @@ void HistoryWidget::moveFieldControls() {
  // (_botStart|_unblock|_joinChannel|_muteUnmute|_reportMessages)
  
  	auto buttonsBottom = bottom - _attachToggle->height();
@@ -6394,7 +6416,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  	if (_botMenu) {
  		const auto skip = st::historyBotMenuSkip;
  		_botMenu->moveToLeft(left + skip, buttonsBottom + skip);
-@@ -7697,6 +7721,7 @@ void HistoryWidget::moveFieldControls() {
+@@ -7697,6 +7724,7 @@ void HistoryWidget::moveFieldControls() {
  		_sendAs->moveToLeft(left, buttonsBottom);
  		left += _sendAs->width();
  	}
@@ -6402,7 +6424,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  	const auto fieldTop = bottom - fieldHeight() - st::historySendPadding;
  	_field->moveToLeft(left, fieldTop);
  	_richDraftPreview->moveToLeft(left, fieldTop);
-@@ -7705,8 +7730,9 @@ void HistoryWidget::moveFieldControls() {
+@@ -7705,8 +7733,9 @@ void HistoryWidget::moveFieldControls() {
  			left,
  			bottom - fieldHeight() - st::historySendPadding);
  	}
@@ -6414,7 +6436,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  	_voiceRecordBar->moveToLeft(0, bottom - _voiceRecordBar->height());
  	_tabbedSelectorToggle->moveToRight(right, buttonsBottom);
  	_botKeyboardHide->moveToRight(right, buttonsBottom);
-@@ -7740,8 +7766,8 @@ void HistoryWidget::moveFieldControls() {
+@@ -7740,8 +7769,8 @@ void HistoryWidget::moveFieldControls() {
  	updateExpandButtonGeometry();
  	updateDiscardRichDraftGeometry();
  
@@ -6425,7 +6447,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  		_field->y() - st::historySendPadding - _fieldBarCancel->height());
  	if (_inlineResults) {
  		_inlineResults->moveBottom(_field->y() - st::historySendPadding);
-@@ -7768,6 +7794,7 @@ void HistoryWidget::moveFieldControls() {
+@@ -7768,6 +7797,7 @@ void HistoryWidget::moveFieldControls() {
  	if (_sendRestriction) {
  		_sendRestriction->setGeometry(fullWidthButtonRect);
  	}
@@ -6433,7 +6455,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  }
  
  void HistoryWidget::updateFieldSize() {
-@@ -7775,6 +7802,8 @@ void HistoryWidget::updateFieldSize() {
+@@ -7775,6 +7805,8 @@ void HistoryWidget::updateFieldSize() {
  	auto fieldWidth = width()
  		- _attachToggle->width()
  		- st::historySendRight
@@ -6442,7 +6464,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  		- _send->width()
  		- _tabbedSelectorToggle->width();
  	if (_botMenu) {
-@@ -8474,7 +8503,7 @@ void HistoryWidget::updateControlsGeometry() {
+@@ -8474,7 +8506,7 @@ void HistoryWidget::updateControlsGeometry() {
  		topShadowLeft,
  		_topBar->bottomNoMargins(),
  		width - topShadowLeft - topShadowRight,
@@ -6451,7 +6473,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  }
  
  void HistoryWidget::itemRemoved(not_null<const HistoryItem*> item) {
-@@ -8748,13 +8777,26 @@ void HistoryWidget::updateHistoryGeometry(
+@@ -8748,13 +8780,26 @@ void HistoryWidget::updateHistoryGeometry(
  			newScrollHeight -= _kbScroll->height();
  		}
  	}
@@ -6479,7 +6501,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  	if (needResize) {
  		_scroll->resize(newScrollWidth, newScrollHeight);
  		// on initial updateListSize we didn't put the _scroll->scrollTop
-@@ -8765,13 +8807,17 @@ void HistoryWidget::updateHistoryGeometry(
+@@ -8765,13 +8810,17 @@ void HistoryWidget::updateHistoryGeometry(
  		}
  	}
  	if (needResize || initial) {
@@ -6499,7 +6521,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  		controller()->floatPlayerAreaUpdated();
  	}
  	if (_subsectionTabs) {
-@@ -9003,7 +9049,7 @@ void HistoryWidget::startItemRevealAnimations() {
+@@ -9003,7 +9052,7 @@ void HistoryWidget::startItemRevealAnimations() {
  							0.,
  							1.,
  							reveal ? reveal->duration : st::itemRevealDuration,
@@ -6508,7 +6530,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  						if (item->out() || _history->peer->isSelf()) {
  							_list->theme()->rotateComplexGradientBackground();
  						}
-@@ -11490,8 +11536,60 @@ void HistoryWidget::updateField() {
+@@ -11490,8 +11539,60 @@ void HistoryWidget::updateField() {
  		return;
  	}
  	_repaintFieldScheduled = true;
@@ -6571,7 +6593,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  }
  
  void HistoryWidget::drawField(Painter &p, const QRect &rect) {
-@@ -11512,7 +11610,37 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+@@ -11512,7 +11613,37 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
  	}
  	p.setInactive(
  		controller()->isGifPausedAtLeastFor(Window::GifPauseReason::Any));
@@ -6610,7 +6632,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  
  	const auto media = (!_previewDrawPreview && drawMsgText)
  		? drawMsgText->media()
-@@ -11552,7 +11680,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+@@ -11552,7 +11683,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
  		st::historyLinkIcon.paint(
  			p,
  			st::historyReplyIconPosition + QPoint(0, backy),
@@ -6619,7 +6641,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  		const auto textTop = backy + st::msgReplyPadding.top();
  		auto previewLeft = st::historyReplySkip;
  
-@@ -11565,7 +11693,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+@@ -11565,7 +11696,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
  			previewLeft += st::historyReplyPreview + st::msgReplyBarSkip;
  		}
  		p.setPen(st::historyReplyNameFg);
@@ -6628,7 +6650,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  			- previewLeft
  			- _fieldBarCancel->width()
  			- st::msgReplyPadding.right();
-@@ -11587,7 +11715,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+@@ -11587,7 +11718,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
  		const auto pausedSpoiler = paused || On(PowerSaving::kChatSpoiler);
  		auto replyLeft = st::historyReplySkip;
  		if (_suggestOptions) {
@@ -6637,7 +6659,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  		} else {
  			const auto quoted = _replyTo
  				&& !HistoryView::Reply::ComposePreviewQuote(_replyTo).empty();
-@@ -11598,7 +11726,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+@@ -11598,7 +11729,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
  				: st::historyReplyIcon).paint(
  					p,
  					st::historyReplyIconPosition + QPoint(0, backy),
@@ -6646,7 +6668,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  		}
  		if (drawMsgText) {
  			if (hasPreview) {
-@@ -11639,17 +11767,17 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+@@ -11639,17 +11770,17 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
  				replyLeft += st::historyReplyPreview + st::msgReplyBarSkip;
  			}
  			if (_suggestOptions) {
@@ -6667,7 +6689,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  							- replyLeft
  							- _fieldBarCancel->width()
  							- st::msgReplyPadding.right());
-@@ -11661,7 +11789,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+@@ -11661,7 +11792,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
  						st::msgReplyPadding.top()
  							+ st::msgServiceNameFont->height
  							+ backy),
@@ -6676,7 +6698,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  						- replyLeft
  						- _fieldBarCancel->width()
  						- st::msgReplyPadding.right(),
-@@ -11683,7 +11811,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+@@ -11683,7 +11814,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
  					+ st::msgDateFont->ascent,
  				st::msgDateFont->elided(
  					tr::lng_profile_loading(tr::now),
@@ -6685,7 +6707,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  						- replyLeft
  						- _fieldBarCancel->width()
  						- st::msgReplyPadding.right()));
-@@ -11691,16 +11819,26 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
+@@ -11691,16 +11822,26 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
  	} else if (hasForward) {
  		st::historyForwardIcon.paint(
  			p,
@@ -6716,7 +6738,7 @@ index 895fb7cd133c06e2d83a03a6ea1c9e77477f71bb..6ec4e0203355e386a671326eb7a85956
  }
  
  void HistoryWidget::paintEditHeader(
-@@ -11796,17 +11934,7 @@ void HistoryWidget::paintEvent(QPaintEvent *e) {
+@@ -11796,17 +11937,7 @@ void HistoryWidget::paintEvent(QPaintEvent *e) {
  	Painter p(this);
  	const auto clip = e->rect();
  	if (_list) {
@@ -7124,10 +7146,20 @@ index 59fda5ecf1ebf06ea1ccd28b525874b82c22f98c..ca77afc66c8bf08aaf1bf0853e953dcf
  	QRect _messageRect;
  
 diff --git a/Telegram/SourceFiles/history/view/history_view_chat_section.cpp b/Telegram/SourceFiles/history/view/history_view_chat_section.cpp
-index 22d8f65f0361ad42e496a54d6d24d1b88578d1a4..c9b9e1cb7d77b44f226afac812ee067efd62e17c 100644
+index 22d8f65f0361ad42e496a54d6d24d1b88578d1a4..0b59de5f4e2bf95397e9a57e49901c799493c7cc 100644
 --- a/Telegram/SourceFiles/history/view/history_view_chat_section.cpp
 +++ b/Telegram/SourceFiles/history/view/history_view_chat_section.cpp
-@@ -1717,6 +1717,10 @@ void ChatWidget::setupComposeControls() {
+@@ -468,6 +468,9 @@ ChatWidget::ChatWidget(
+ 		_scroll.get(),
+ 		controller->chatStyle(),
+ 		static_cast<HistoryView::CornerButtonsDelegate*>(this)) {
++	_scroll->setSmoothWheelEnabled([] {
++		return Core::App().settings().readPref<bool>(Core::kSmoothChatWheelKey);
++	});
+ 	controller->chatStyle()->paletteChanged(
+ 	) | rpl::on_next([=] {
+ 		_scroll->updateBars();
+@@ -1717,6 +1720,10 @@ void ChatWidget::setupComposeControls() {
  			[=] { chooseAttach(overrideCompress); });
  	}, lifetime());
  
@@ -7138,7 +7170,7 @@ index 22d8f65f0361ad42e496a54d6d24d1b88578d1a4..c9b9e1cb7d77b44f226afac812ee067e
  	_composeControls->setSendAsFileConfirmed(crl::guard(this, [=](
  			std::shared_ptr<Ui::PreparedBundle> bundle,
  			Api::SendOptions options) {
-@@ -4545,7 +4549,7 @@ void ChatWidget::updateControlsGeometry() {
+@@ -4545,7 +4552,7 @@ void ChatWidget::updateControlsGeometry() {
  		? base::make_optional(takeTopDelta() + _scrollTopDelta)
  		: 0;
  	_topBar->resizeToWidth(contentWidth);
@@ -7147,7 +7179,7 @@ index 22d8f65f0361ad42e496a54d6d24d1b88578d1a4..c9b9e1cb7d77b44f226afac812ee067e
  	const auto tabsLeftSkip = _subsectionTabs
  		? _subsectionTabs->leftSkip()
  		: 0;
-@@ -4608,9 +4612,18 @@ void ChatWidget::updateControlsGeometry() {
+@@ -4608,9 +4615,18 @@ void ChatWidget::updateControlsGeometry() {
  	}
  	bottom -= tabsBottomSkip;
  
@@ -7168,7 +7200,7 @@ index 22d8f65f0361ad42e496a54d6d24d1b88578d1a4..c9b9e1cb7d77b44f226afac812ee067e
  		_skipScrollEvent = true;
  		_scroll->resize(scrollSize);
  		_inner->resizeToWidth(scrollSize.width(), _scroll->height());
-@@ -4634,10 +4647,13 @@ void ChatWidget::updateControlsGeometry() {
+@@ -4634,10 +4650,13 @@ void ChatWidget::updateControlsGeometry() {
  		updateInnerVisibleArea();
  	}
  	_composeControls->move(0, composeTop);
@@ -10039,7 +10071,7 @@ index f19fce5e2f55878832ea0bd41fe225620fa9eb5d..7def9d3d3b18e1007ac0b4be552cddca
  		_testModeLabel->moveToRight(
  			skip + _settings->width() + skip,
 diff --git a/Telegram/SourceFiles/mainwidget.cpp b/Telegram/SourceFiles/mainwidget.cpp
-index 7374e835ef165f64603cf71e5fd87a223ef78c4a..c5ac4620a4fed8e2794d38b64352609044d68fa8 100644
+index 7374e835ef165f64603cf71e5fd87a223ef78c4a..5ee37e24eb78a310870b529c8d51bcd57800a251 100644
 --- a/Telegram/SourceFiles/mainwidget.cpp
 +++ b/Telegram/SourceFiles/mainwidget.cpp
 @@ -50,9 +50,13 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
@@ -10071,7 +10103,48 @@ index 7374e835ef165f64603cf71e5fd87a223ef78c4a..c5ac4620a4fed8e2794d38b643526090
  
  namespace {
  
-@@ -1917,6 +1923,13 @@ void MainWidget::showSection(
+@@ -1641,12 +1647,21 @@ void MainWidget::showHistory(
+ 	}
+ 
+ 	const auto wasActivePeer = _controller->activeChatCurrent().peer();
++	const auto wideSettingsExit = !isOneColumn()
++		&& _dialogs
++		&& _dialogs->hasSettingsPage();
++	const auto crossFadeToChat = peerId
++		&& _history->peer()
++		&& !alreadyThatPeer
++		&& !back
++		&& way == Way::ClearStack;
+ 	if (params.activation != anim::activation::background) {
+ 		_controller->window().hideSettingsAndLayer();
+ 	}
+ 
+ 	auto animatedShow = [&] {
+ 		if (_showAnimation
++			|| anim::Disabled()
+ 			|| Core::App().passcodeLocked()
+ 			|| (params.animated == anim::type::instant)) {
+ 			return false;
+@@ -1654,6 +1669,9 @@ void MainWidget::showHistory(
+ 		if (params.slideFromBottom) {
+ 			return !_history->isHidden();
+ 		}
++		if (wideSettingsExit || crossFadeToChat) {
++			return true;
++		}
+ 		if (!peerId) {
+ 			if (isOneColumn()) {
+ 				return _dialogs && _dialogs->isHidden();
+@@ -1729,6 +1747,8 @@ void MainWidget::showHistory(
+ 				_history->showAnimated(
+ 					params.slideFromBottom
+ 						? Window::SlideDirection::FromBottom
++						: (wideSettingsExit || crossFadeToChat)
++						? Window::SlideDirection::CrossFade
+ 						: back
+ 						? Window::SlideDirection::FromLeft
+ 						: Window::SlideDirection::FromRight,
+@@ -1917,6 +1937,13 @@ void MainWidget::showSection(
  		return;
  	}
  
@@ -10085,7 +10158,7 @@ index 7374e835ef165f64603cf71e5fd87a223ef78c4a..c5ac4620a4fed8e2794d38b643526090
  	// If the window was not resized, but we've enabled
  	// tabbedSelectorSectionEnabled or thirdSectionInfoEnabled
  	// we need to update adaptive layout to Adaptive::ThirdColumn().
-@@ -2028,6 +2041,12 @@ void MainWidget::showNewSection(
+@@ -2028,6 +2055,12 @@ void MainWidget::showNewSection(
  		thirdSectionTop,
  		_thirdColumnWidth,
  		height() - thirdSectionTop);
@@ -10098,7 +10171,7 @@ index 7374e835ef165f64603cf71e5fd87a223ef78c4a..c5ac4620a4fed8e2794d38b643526090
  	auto newThirdSection = (isThreeColumn() && params.thirdColumn)
  		? memento->createWidget(
  			this,
-@@ -2067,6 +2086,14 @@ void MainWidget::showNewSection(
+@@ -2067,18 +2100,38 @@ void MainWidget::showNewSection(
  			newMainGeometry);
  	Assert(newMainSection || newThirdSection);
  
@@ -10113,16 +10186,32 @@ index 7374e835ef165f64603cf71e5fd87a223ef78c4a..c5ac4620a4fed8e2794d38b643526090
  	const auto fromBottom = params.slideFromBottom
  		&& !newThirdSection
  		&& (_mainSection != nullptr);
-@@ -2078,7 +2105,7 @@ void MainWidget::showNewSection(
++	const auto wideSettingsExit = !isOneColumn()
++		&& !wideSettings
++		&& newMainSection
++		&& _dialogs
++		&& _dialogs->hasSettingsPage();
++	const auto crossFadeToChat = params.way == SectionShow::Way::ClearStack
++		&& dynamic_cast<HistoryView::ChatWidget*>(newMainSection.data())
++		&& dynamic_cast<HistoryView::ChatWidget*>(_mainSection.data());
+ 
+ 	auto animatedShow = [&] {
+ 		if (_showAnimation
++			|| anim::Disabled()
+ 			|| Core::App().passcodeLocked()
+ 			|| (params.animated == anim::type::instant)
  			|| memento->instant()) {
  			return false;
  		}
 -		if (fromBottom) {
 +		if (fromBottom || wideSettings) {
++			return true;
++		}
++		if (wideSettingsExit || crossFadeToChat) {
  			return true;
  		}
  		if (!isOneColumn() && params.way == SectionShow::Way::ClearStack) {
-@@ -2095,6 +2122,9 @@ void MainWidget::showNewSection(
+@@ -2095,6 +2148,9 @@ void MainWidget::showNewSection(
  			? prepareThirdSectionAnimation(newThirdSection)
  			: prepareMainSectionAnimation(newMainSection, fromBottom))
  		: Window::SectionSlideParams();
@@ -10132,7 +10221,7 @@ index 7374e835ef165f64603cf71e5fd87a223ef78c4a..c5ac4620a4fed8e2794d38b643526090
  
  	setFocus(); // otherwise dialogs widget could be focused.
  
-@@ -2110,7 +2140,17 @@ void MainWidget::showNewSection(
+@@ -2110,7 +2166,17 @@ void MainWidget::showNewSection(
  		? _thirdSection
  		: _mainSection;
  	if (newThirdSection) {
@@ -10150,7 +10239,7 @@ index 7374e835ef165f64603cf71e5fd87a223ef78c4a..c5ac4620a4fed8e2794d38b643526090
  		_thirdSection->removeRequests(
  		) | rpl::on_next([=] {
  			destroyThirdSection();
-@@ -2125,6 +2165,15 @@ void MainWidget::showNewSection(
+@@ -2125,6 +2191,15 @@ void MainWidget::showNewSection(
  		updateControlsGeometry();
  	} else {
  		_mainSection = std::move(newMainSection);
@@ -10166,18 +10255,16 @@ index 7374e835ef165f64603cf71e5fd87a223ef78c4a..c5ac4620a4fed8e2794d38b643526090
  		_history->finishAnimating();
  		_history->showHistory(PeerId(), MsgId());
  
-@@ -2145,7 +2194,9 @@ void MainWidget::showNewSection(
- 
- 	if (animationParams) {
+@@ -2147,6 +2222,8 @@ void MainWidget::showNewSection(
  		auto back = (params.way == SectionShow::Way::Backward);
--		auto direction = fromBottom
-+		auto direction = wideSettings
-+			? Window::SlideDirection::CrossFade
-+			: fromBottom
+ 		auto direction = fromBottom
  			? Window::SlideDirection::FromBottom
++			: (wideSettings || wideSettingsExit || crossFadeToChat)
++			? Window::SlideDirection::CrossFade
  			: (back || settingSection->forceAnimateBack())
  			? Window::SlideDirection::FromLeft
-@@ -2441,6 +2492,9 @@ void MainWidget::orderWidgets() {
+ 			: Window::SlideDirection::FromRight;
+@@ -2441,6 +2518,9 @@ void MainWidget::orderWidgets() {
  	if (_callTopBar) {
  		_callTopBar->raise();
  	}
@@ -10187,7 +10274,7 @@ index 7374e835ef165f64603cf71e5fd87a223ef78c4a..c5ac4620a4fed8e2794d38b643526090
  	if (_sideShadow) {
  		_sideShadow->raise();
  	}
-@@ -2570,6 +2624,9 @@ void MainWidget::paintEvent(QPaintEvent *e) {
+@@ -2570,6 +2650,9 @@ void MainWidget::paintEvent(QPaintEvent *e) {
  	if (_showAnimation) {
  		auto p = QPainter(this);
  		_showAnimation->paintContents(p);
@@ -10197,7 +10284,7 @@ index 7374e835ef165f64603cf71e5fd87a223ef78c4a..c5ac4620a4fed8e2794d38b643526090
  	}
  }
  
-@@ -2681,6 +2738,9 @@ void MainWidget::resizeEvent(QResizeEvent *e) {
+@@ -2681,6 +2764,9 @@ void MainWidget::resizeEvent(QResizeEvent *e) {
  }
  
  void MainWidget::updateMainSectionShown() {
@@ -10207,7 +10294,7 @@ index 7374e835ef165f64603cf71e5fd87a223ef78c4a..c5ac4620a4fed8e2794d38b643526090
  	_controller->setMainSectionShown(_mainSection || _history->peer());
  }
  
-@@ -2700,6 +2760,8 @@ void MainWidget::updateControlsGeometry() {
+@@ -2700,6 +2786,8 @@ void MainWidget::updateControlsGeometry() {
  	}
  	if (isThreeColumn()) {
  		if (!_thirdSection
@@ -10216,7 +10303,7 @@ index 7374e835ef165f64603cf71e5fd87a223ef78c4a..c5ac4620a4fed8e2794d38b643526090
  			&& !_controller->takeThirdSectionFromLayer()) {
  			auto params = Window::SectionShow(
  				Window::SectionShow::Way::ClearStack,
-@@ -2768,14 +2830,20 @@ void MainWidget::updateControlsGeometry() {
+@@ -2768,14 +2856,20 @@ void MainWidget::updateControlsGeometry() {
  			mainSectionGeometry,
  			_contentScrollAddToY);
  		if (_hider) _hider->setGeometry(0, 0, dialogsWidth, height());
@@ -10239,7 +10326,7 @@ index 7374e835ef165f64603cf71e5fd87a223ef78c4a..c5ac4620a4fed8e2794d38b643526090
  				height() - thirdSectionTop);
  		}
  		const auto shadowTop = _controller->window().verticalShadowTop();
-@@ -2784,13 +2852,24 @@ void MainWidget::updateControlsGeometry() {
+@@ -2784,13 +2878,24 @@ void MainWidget::updateControlsGeometry() {
  			accumulate_min(
  				dialogsWidth,
  				width() - st::columnMinimalWidthMain);
@@ -10266,7 +10353,7 @@ index 7374e835ef165f64603cf71e5fd87a223ef78c4a..c5ac4620a4fed8e2794d38b643526090
  				shadowHeight);
  		}
  		if (_thirdShadow) {
-@@ -2851,7 +2930,41 @@ void MainWidget::updateControlsGeometry() {
+@@ -2851,7 +2956,41 @@ void MainWidget::updateControlsGeometry() {
  	floatPlayerUpdatePositions();
  }
  
@@ -10308,7 +10395,7 @@ index 7374e835ef165f64603cf71e5fd87a223ef78c4a..c5ac4620a4fed8e2794d38b643526090
  	if (const auto strong = _thirdSection.data()) {
  		if (Ui::InFocusChain(strong)) {
  			setFocus();
-@@ -2860,6 +2973,36 @@ void MainWidget::destroyThirdSection() {
+@@ -2860,6 +2999,36 @@ void MainWidget::destroyThirdSection() {
  	_thirdSection.destroy();
  }
  
@@ -10345,7 +10432,7 @@ index 7374e835ef165f64603cf71e5fd87a223ef78c4a..c5ac4620a4fed8e2794d38b643526090
  void MainWidget::refreshResizeAreas() {
  	if (!isOneColumn() && _dialogs) {
  		ensureFirstColumnResizeAreaCreated();
-@@ -2872,7 +3015,9 @@ void MainWidget::refreshResizeAreas() {
+@@ -2872,7 +3041,9 @@ void MainWidget::refreshResizeAreas() {
  		_firstColumnResizeArea.destroy();
  	}
  
@@ -10356,7 +10443,7 @@ index 7374e835ef165f64603cf71e5fd87a223ef78c4a..c5ac4620a4fed8e2794d38b643526090
  		ensureThirdColumnResizeAreaCreated();
  		_thirdColumnResizeArea->setGeometryToLeft(
  			_thirdSection->x(),
-@@ -2906,7 +3051,7 @@ void MainWidget::ensureFirstColumnResizeAreaCreated() {
+@@ -2906,7 +3077,7 @@ void MainWidget::ensureFirstColumnResizeAreaCreated() {
  	}
  	auto moveLeftCallback = [=](int globalLeft) {
  		const auto newWidth = globalLeft - mapToGlobal(QPoint(0, 0)).x();
@@ -10365,7 +10452,7 @@ index 7374e835ef165f64603cf71e5fd87a223ef78c4a..c5ac4620a4fed8e2794d38b643526090
  			? 0.
  			: float64(newWidth) / width();
  		const auto nochat = !_controller->mainSectionShown();
-@@ -3227,7 +3372,8 @@ void MainWidget::updateWindowAdaptiveLayout() {
+@@ -3227,7 +3398,8 @@ void MainWidget::updateWindowAdaptiveLayout() {
  
  	_controller->columns().updateDialogsWidthRatio(dialogsWidthRatio, nochat);
  
@@ -10632,10 +10719,40 @@ index ceed08440fb2f897b14693545b4e2f8e8401f0ea..679b1a3f1d9bb0db3c00c837be1894c0
  void SetupConnectionType(
  	not_null<Window::Controller*> controller,
 diff --git a/Telegram/SourceFiles/settings/sections/settings_chat.cpp b/Telegram/SourceFiles/settings/sections/settings_chat.cpp
-index 6c34fac3f55ae969225f5cd5528efc25688725eb..4a93918ad30638344feb26e790a2cde5d09e1869 100644
+index 6c34fac3f55ae969225f5cd5528efc25688725eb..8538fb6741bcb747366f4c8269ca67ec89536e7d 100644
 --- a/Telegram/SourceFiles/settings/sections/settings_chat.cpp
 +++ b/Telegram/SourceFiles/settings/sections/settings_chat.cpp
-@@ -1289,6 +1289,59 @@ void Chat::setupContent() {
+@@ -47,6 +47,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
+ #include "ui/ui_utility.h"
+ #include "ui/widgets/menu/menu_add_action_callback.h"
+ #include "history/view/history_view_quick_action.h"
++#include "lang/lang_instance.h"
+ #include "lang/lang_keys.h"
+ #include "lottie/lottie_icon.h"
+ #include "window/themes/window_theme.h"
+@@ -1231,6 +1232,21 @@ void BuildChatSectionContent(SectionBuilder &builder) {
+ 	BuildChatListQuickActionSection(builder);
+ 	BuildStickersEmojiSection(builder);
+ 	BuildMessagesSection(builder);
++	const auto &lang = Core::App().langpack();
++	const auto russian = lang.id() == u"ru"_q || lang.baseId() == u"ru"_q;
++	if (const auto wheel = builder.addCheckbox({
++		.id = u"chat/smooth-wheel"_q,
++		.title = rpl::single(russian
++			? u"Плавная прокрутка колёсиком"_q
++			: u"Smooth mouse wheel scrolling"_q),
++		.checked = Core::App().settings().readPref<bool>(
++			Core::kSmoothChatWheelKey),
++		.keywords = { u"scroll"_q, u"wheel"_q, u"прокрутка"_q },
++	})) {
++		wheel->checkedChanges() | rpl::on_next([](bool value) {
++			Core::App().settings().writePref<bool>(Core::kSmoothChatWheelKey, value);
++		}, wheel->lifetime());
++	}
+ 	BuildSensitiveContentSection(builder);
+ 	BuildArchiveSection(builder);
+ 	BuildSupportSection(builder);
+@@ -1289,6 +1305,59 @@ void Chat::setupContent() {
  	Ui::ResizeFitChild(this, content);
  }
  
@@ -10695,7 +10812,7 @@ index 6c34fac3f55ae969225f5cd5528efc25688725eb..4a93918ad30638344feb26e790a2cde5
  } // namespace
  
  void PaintRoundColorButton(
-@@ -1340,40 +1393,31 @@ void SetupStickersEmoji(
+@@ -1340,40 +1409,31 @@ void SetupStickersEmoji(
  		std::move(wrap),
  		QMargins(0, 0, 0, st::settingsCheckbox.margin.bottom())));
  
@@ -10745,7 +10862,7 @@ index 6c34fac3f55ae969225f5cd5528efc25688725eb..4a93918ad30638344feb26e790a2cde5
  		return wrap->entity();
  	};
  
-@@ -1693,13 +1737,10 @@ void SetupMessages(
+@@ -1693,13 +1753,10 @@ void SetupMessages(
  
  	Ui::AddSkip(inner, st::settingsSendTypeSkip);
  
@@ -10763,7 +10880,7 @@ index 6c34fac3f55ae969225f5cd5528efc25688725eb..4a93918ad30638344feb26e790a2cde5
  	cornerReply->checkedChanges(
  	) | rpl::on_next([=](bool checked) {
  		Core::App().settings().setCornerReply(checked);
-@@ -1707,18 +1748,15 @@ void SetupMessages(
+@@ -1707,18 +1764,15 @@ void SetupMessages(
  	}, inner->lifetime());
  	if (highlights) {
  		highlights->push_back({ u"chat/corner-reply"_q, {
@@ -10787,7 +10904,7 @@ index 6c34fac3f55ae969225f5cd5528efc25688725eb..4a93918ad30638344feb26e790a2cde5
  	cornerReaction->checkedChanges(
  	) | rpl::on_next([=](bool checked) {
  		Core::App().settings().setCornerReaction(checked);
-@@ -1726,18 +1764,15 @@ void SetupMessages(
+@@ -1726,18 +1780,15 @@ void SetupMessages(
  	}, inner->lifetime());
  	if (highlights) {
  		highlights->push_back({ u"chat/corner-reaction"_q, {
@@ -10811,7 +10928,7 @@ index 6c34fac3f55ae969225f5cd5528efc25688725eb..4a93918ad30638344feb26e790a2cde5
  	pullToNext->checkedChanges(
  	) | rpl::on_next([=](bool checked) {
  		Core::App().settings().setPullToNextChannel(checked);
-@@ -2575,4 +2610,12 @@ Type ChatId() {
+@@ -2575,4 +2626,12 @@ Type ChatId() {
  	return Chat::Id();
  }
  
@@ -10837,6 +10954,30 @@ index ffb0304c2cd4390290fb16a82baacaa0c71ecd56..b91e11b913d2bb9dba19612b9282d6b2
  
  void SetupDefaultThemes(
  	not_null<Window::Controller*> window,
+diff --git a/Telegram/SourceFiles/settings/sections/settings_folders.cpp b/Telegram/SourceFiles/settings/sections/settings_folders.cpp
+index 997d8da164cbc508af5c45c487227d3693d8643e..9e525466af7ea6667e2e530acbdaa9b45015292a 100644
+--- a/Telegram/SourceFiles/settings/sections/settings_folders.cpp
++++ b/Telegram/SourceFiles/settings/sections/settings_folders.cpp
+@@ -1120,7 +1120,8 @@ void BuildViewSection(SectionBuilder &builder) {
+ 					value,
+ 					text,
+ 					st::settingsSendType),
+-				st::settingsSendTypePadding);
++				st::settingsSendTypePadding,
++				style::al_justify);
+ 		};
+ 		addSend(false, tr::lng_filters_vertical(tr::now));
+ 		addSend(true, tr::lng_filters_horizontal(tr::now));
+@@ -1158,7 +1159,8 @@ void BuildViewSection(SectionBuilder &builder) {
+ 					value,
+ 					text,
+ 					st::settingsSendType),
+-				st::settingsSendTypePadding);
++				st::settingsSendTypePadding,
++				style::al_justify);
+ 		};
+ 		addMode(Mode::Default, tr::lng_filters_tabs_default(tr::now));
+ 		addMode(Mode::TextOnly, tr::lng_filters_tabs_text(tr::now));
 diff --git a/Telegram/SourceFiles/settings/sections/settings_information.cpp b/Telegram/SourceFiles/settings/sections/settings_information.cpp
 index 8982b515b5a30600f5565c3b7e81dc5218c96950..14d23eb3bedeea5af86139b1216f94c12a3cfcb4 100644
 --- a/Telegram/SourceFiles/settings/sections/settings_information.cpp
@@ -10897,7 +11038,7 @@ index 8982b515b5a30600f5565c3b7e81dc5218c96950..14d23eb3bedeea5af86139b1216f94c1
  
  const auto kMeta = BuildHelper({
 diff --git a/Telegram/SourceFiles/settings/sections/settings_main.cpp b/Telegram/SourceFiles/settings/sections/settings_main.cpp
-index b452a175cb1da0b049df5ba2d5625ea4fafd50bd..9efdb3aed8e53c3253934c9474a48d308cde2e11 100644
+index b452a175cb1da0b049df5ba2d5625ea4fafd50bd..61b9dd9c7c53445646ea50bca42f90b5bd04461e 100644
 --- a/Telegram/SourceFiles/settings/sections/settings_main.cpp
 +++ b/Telegram/SourceFiles/settings/sections/settings_main.cpp
 @@ -49,6 +49,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
@@ -10971,7 +11112,7 @@ index b452a175cb1da0b049df5ba2d5625ea4fafd50bd..9efdb3aed8e53c3253934c9474a48d30
  	builder.addSectionButton({
  		.title = tr::lng_settings_section_chat_settings(),
  		.targetSection = ChatId(),
-@@ -1212,6 +1241,157 @@ Type MainId() {
+@@ -1212,6 +1241,158 @@ Type MainId() {
  	return Main::Id();
  }
  
@@ -11115,6 +11256,7 @@ index b452a175cb1da0b049df5ba2d5625ea4fafd50bd..9efdb3aed8e53c3253934c9474a48d30
 +	open(tr::lng_settings_section_privacy(), st::menuIconLock, PrivacySecurityId());
 +	open(tr::lng_settings_data_storage(), st::menuIconManage, DataStorageId());
 +	open(tr::lng_settings_sessions_title(), st::menuIconUnmute, SessionsId());
++	open(tr::lng_settings_section_chat_settings(), st::menuIconChatBubble, ChatId());
 +	open(tr::lng_edit_channel_color(), st::menuIconChangeColors, AppearanceId());
 +	add(tr::lng_settings_language(), st::menuIconTranslate, [=] {
 +		static auto guard = base::binary_guard();
