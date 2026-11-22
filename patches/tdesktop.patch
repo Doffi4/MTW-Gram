@@ -4189,7 +4189,7 @@ index 3e436f7087c3408cf06921031769eb27830a59af..5c429ee6612307c6c8c2b3202d5a6e5b
  	CrashReports::Finish();
 diff --git a/Telegram/SourceFiles/core/update_github.cpp b/Telegram/SourceFiles/core/update_github.cpp
 new file mode 100644
-index 0000000000000000000000000000000000000000..95620304af8dd35027bdfa03de1b4ede5115faf7
+index 0000000000000000000000000000000000000000..34a7fa9a06591d01d2117b80e44743ccbb6119c1
 --- /dev/null
 +++ b/Telegram/SourceFiles/core/update_github.cpp
 @@ -0,0 +1,338 @@
@@ -4217,7 +4217,7 @@ index 0000000000000000000000000000000000000000..95620304af8dd35027bdfa03de1b4ede
 +namespace Core::Updates {
 +namespace {
 +
-+constexpr auto kVersion = u"0.2.2-beta";
++constexpr auto kVersion = u"0.2.3-beta";
 +constexpr auto kApi = u"https://api.github.com/repos/Doffi4/MTW-Gram/releases?per_page=30";
 +constexpr auto kDownload = u"https://github.com/Doffi4/MTW-Gram/releases/download/";
 +constexpr auto kMaxArchive = 160 * 1024 * 1024;
@@ -5071,7 +5071,7 @@ index 78c1fcbee2d6fd9f6b0b41319574c38dce656c0b..6e87288d7616a6a6e945b09f67027d40
  			Ui::NameTextOptions());
  	}
 diff --git a/Telegram/SourceFiles/dialogs/dialogs_widget.cpp b/Telegram/SourceFiles/dialogs/dialogs_widget.cpp
-index 46fd8e20cb1d20dbb74a46054e138b4861e75cbc..9225f1619181cac6dcae75e2973ef01ffe135af5 100644
+index 46fd8e20cb1d20dbb74a46054e138b4861e75cbc..94bb6c244733cfc10bffca74e0563242cd73fe79 100644
 --- a/Telegram/SourceFiles/dialogs/dialogs_widget.cpp
 +++ b/Telegram/SourceFiles/dialogs/dialogs_widget.cpp
 @@ -31,6 +31,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
@@ -5338,7 +5338,17 @@ index 46fd8e20cb1d20dbb74a46054e138b4861e75cbc..9225f1619181cac6dcae75e2973ef01f
  void Widget::setupStories() {
  	_stories->verticalScrollEvents(
  	) | rpl::on_next([=](not_null<QWheelEvent*> e) {
-@@ -1831,18 +2038,23 @@ void Widget::updateLockUnlockPosition() {
+@@ -1815,9 +2022,6 @@ void Widget::updateControlsVisibility(bool fast) {
+ 		_childList->show();
+ 		_childListShadow->show();
+ 	}
+-	if (_hideChildListCanvas) {
+-		_hideChildListCanvas->show();
+-	}
+ 	if (_childList && _searchHasFocus) {
+ 		setInnerFocus();
+ 	}
+@@ -1831,18 +2035,23 @@ void Widget::updateLockUnlockPosition() {
  	const auto stories = (_stories && !_stories->isHidden())
  		? _stories->collapsedGeometryCurrent()
  		: Stories::List::CollapsedGeometry();
@@ -5365,7 +5375,71 @@ index 46fd8e20cb1d20dbb74a46054e138b4861e75cbc..9225f1619181cac6dcae75e2973ef01f
  	if (_searchHasFocus != has) {
  		_searchHasFocus = has;
  		if (_postponeProcessSearchFocusChange) {
-@@ -3821,6 +4033,10 @@ void Widget::applySearchUpdate() {
+@@ -2135,7 +2344,7 @@ void Widget::changeOpenedSubsection(
+ 	}
+ 	//_scroll->verticalScrollBar()->setMinimum(0);
+ 	_showAnimation = nullptr;
+-	destroyChildListCanvas();
++	_childListCanvas = nullptr;
+ 	change();
+ 	refreshTopBars();
+ 	updateSuggestions(anim::type::instant);
+@@ -2157,11 +2366,6 @@ void Widget::changeOpenedSubsection(
+ 	}
+ }
+ 
+-void Widget::destroyChildListCanvas() {
+-	_childListShown = 0.;
+-	_hideChildListCanvas = nullptr;
+-}
+-
+ void Widget::changeOpenedFolder(Data::Folder *folder, anim::type animated) {
+ 	if (_openedFolder == folder) {
+ 		return;
+@@ -2784,15 +2988,12 @@ void Widget::showFast() {
+ 	show();
+ }
+ 
+-rpl::producer<float64> Widget::shownProgressValue() const {
+-	return _shownProgressValue.value();
+-}
+-
+ void Widget::showAnimated(
+ 		Window::SlideDirection direction,
+ 		const Window::SectionSlideParams &params) {
+ 	_showAnimation = nullptr;
+ 	_chatsFilterSlideCanvas = nullptr;
++	_childListCanvas = nullptr;
+ 
+ 	auto oldContentCache = params.oldContentCache;
+ 	showFast();
+@@ -2808,7 +3009,6 @@ void Widget::showAnimated(
+ 		_childList->hide();
+ 		_childListShadow->hide();
+ 	}
+-	_shownProgressValue = 0.;
+ 	startSlideAnimation(
+ 		std::move(oldContentCache),
+ 		std::move(newContentCache),
+@@ -2852,9 +3052,6 @@ void Widget::startSlideAnimation(
+ 	_showAnimation = std::make_unique<Window::SlideAnimation>();
+ 	_showAnimation->setDirection(direction);
+ 	_showAnimation->setRepaintCallback([=] {
+-		if (_shownProgressValue.current() < 1.) {
+-			_shownProgressValue = _showAnimation->progress();
+-		}
+ 		update();
+ 	});
+ 	_showAnimation->setFinishedCallback([=] { slideFinished(); });
+@@ -2872,7 +3069,6 @@ QRect Widget::floatPlayerAvailableRect() {
+ 
+ void Widget::slideFinished() {
+ 	_showAnimation = nullptr;
+-	_shownProgressValue = 1.;
+ 	updateControlsVisibility(true);
+ 	if ((!_subsectionTopBar || !_subsectionTopBar->searchHasFocus())
+ 		&& !_searchHasFocus) {
+@@ -3821,6 +4017,10 @@ void Widget::applySearchUpdate() {
  }
  
  void Widget::updateForceDisplayWide() {
@@ -5376,7 +5450,167 @@ index 46fd8e20cb1d20dbb74a46054e138b4861e75cbc..9225f1619181cac6dcae75e2973ef01f
  	if (_childList) {
  		_childList->updateForceDisplayWide();
  		return;
-@@ -4453,16 +4669,29 @@ void Widget::updateControlsGeometry() {
+@@ -3857,15 +4057,11 @@ void Widget::showForum(
+ void Widget::openChildList(
+ 		not_null<Data::Forum*> forum,
+ 		const Window::SectionShow &params) {
+-	auto slide = Window::SectionSlideParams();
+ 	const auto animated = !_childList
++		&& !isHidden()
+ 		&& (params.animated == anim::type::normal);
+-	if (animated) {
+-		destroyChildListCanvas();
+-		slide.oldContentCache = Ui::GrabWidget(
+-			this,
+-			QRect(_narrowWidth, 0, width() - _narrowWidth, height()));
+-	}
++	auto before = animated ? Ui::GrabWidget(this) : QPixmap();
++	_childListCanvas = nullptr;
+ 	auto copy = params;
+ 	copy.childColumn = false;
+ 	copy.animated = anim::type::instant;
+@@ -3897,83 +4093,83 @@ void Widget::openChildList(
+ 		update();
+ 		_inner->update();
+ 		_search->setVisible(value < 1.);
+-		if (!value && _childListShadow.get() != shadow) {
+-			delete shadow;
+-		}
+ 	}, shadow->lifetime());
+ 
+ 	_prepareTopBarSnapshot.fire({});
++	_childListShown = 1.;
+ 	updateControlsGeometry();
+ 	updateControlsVisibility(true);
+-
+-	if (animated) {
+-		_childList->showAnimated(Window::SlideDirection::FromRight, slide);
+-		_childListShown = _childList->shownProgressValue();
+-	} else {
+-		_childListShown = 1.;
+-	}
+ 	if (hasFocus()) {
+ 		setInnerFocus();
+ 	}
+ 	updateForceDisplayWide();
++	animateChildList(std::move(before), Window::SlideDirection::FromRight);
+ }
+ 
+ void Widget::closeChildList(anim::type animated) {
+ 	if (!_childList) {
+ 		return;
+ 	}
+-	const auto geometry = _childList->geometry();
+-	const auto shown = _childListShown.current();
+-	auto oldContentCache = QPixmap();
+-	auto animation = (Window::SlideAnimation*)nullptr;
+-	if (animated == anim::type::normal) {
+-		oldContentCache = Ui::GrabWidget(_childList.get());
+-		_hideChildListCanvas = std::make_unique<Ui::RpWidget>(this);
+-		_hideChildListCanvas->setAttribute(Qt::WA_TransparentForMouseEvents);
+-		_hideChildListCanvas->setGeometry(geometry);
+-		animation = _hideChildListCanvas->lifetime().make_state<
+-			Window::SlideAnimation
+-		>();
+-		_hideChildListCanvas->paintRequest(
+-		) | rpl::on_next([=] {
+-			QPainter p(_hideChildListCanvas.get());
+-			animation->paintContents(p);
+-		}, _hideChildListCanvas->lifetime());
+-	}
++	auto before = (animated == anim::type::normal && !isHidden())
++		? Ui::GrabWidget(this)
++		: QPixmap();
++	_childListCanvas = nullptr;
+ 	if (InFocusChain(_childList.get())) {
+ 		setFocus();
+ 	}
+ 	_childList = nullptr;
+ 	_childListShown = 0.;
++	_childListShadow = nullptr;
+ 	// A destroyed child can't reset the search scope it published.
+ 	controller()->setSearchInChat(_searchState.inChat);
+ 	if (hasFocus()) {
+ 		setInnerFocus();
+ 		_search->finishAnimating();
+ 	}
+-	if (animated == anim::type::normal) {
+-		_hideChildListCanvas->hide();
+-		auto newContentCache = Ui::GrabWidget(this, geometry);
+-		_hideChildListCanvas->show();
+-
+-		_childListShown = shown;
+-		_childListShadow.release();
+-
+-		animation->setDirection(Window::SlideDirection::FromLeft);
+-		animation->setRepaintCallback([=] {
+-			_childListShown = (1. - animation->progress()) * shown;
+-			_hideChildListCanvas->update();
+-		});
+-		animation->setFinishedCallback([=] {
+-			destroyChildListCanvas();
+-		});
+-		animation->setPixmaps(oldContentCache, newContentCache);
+-		animation->start();
+-	} else {
+-		_childListShadow = nullptr;
+-	}
+ 	updateStoriesVisibility();
+ 	updateForceDisplayWide();
++	animateChildList(std::move(before), Window::SlideDirection::FromLeft);
++}
++
++void Widget::animateChildList(QPixmap before, Window::SlideDirection direction) {
++	const auto scale = style::DevicePixelRatio();
++	if (before.isNull() || before.size() != size() * scale
++		|| width() <= _narrowWidth) {
++		return;
++	}
++	const auto after = Ui::GrabWidget(this);
++	const auto left = QRect(0, 0, _narrowWidth, height());
++	const auto right = QRect(_narrowWidth, 0, width() - _narrowWidth, height());
++	const auto copy = [=](const QPixmap &frame, QRect part) {
++		auto result = frame.copy(QRect(part.topLeft() * scale, part.size() * scale));
++		result.setDevicePixelRatio(scale);
++		return result;
++	};
++	const auto oldSidebar = copy(before, left);
++	const auto newSidebar = copy(after, left);
++
++	_childListCanvas = std::make_unique<Ui::RpWidget>(this);
++	const auto canvas = _childListCanvas.get();
++	canvas->setAttribute(Qt::WA_TransparentForMouseEvents);
++	canvas->setGeometry(rect());
++	const auto animation = canvas->lifetime().make_state<Window::SlideAnimation>();
++	canvas->paintRequest() | rpl::on_next([=] {
++		auto p = QPainter(canvas);
++		p.drawPixmap(0, 0, oldSidebar);
++		p.setOpacity(animation->progress());
++		p.drawPixmap(0, 0, newSidebar);
++		p.setOpacity(1.);
++		p.setClipRect(right);
++		p.translate(right.x(), 0);
++		animation->paintContents(p);
++	}, canvas->lifetime());
++	animation->setDirection(direction);
++	animation->setPixmaps(copy(before, right), copy(after, right));
++	animation->setRepaintCallback([=] { canvas->update(); });
++	animation->setFinishedCallback([=] { _childListCanvas = nullptr; });
++	canvas->raise();
++	canvas->show();
++	animation->start();
+ }
+ 
+ bool Widget::applySearchState(SearchState state) {
+@@ -4343,6 +4539,7 @@ void Widget::completeHashtag(QString tag) {
+ }
+ 
+ void Widget::resizeEvent(QResizeEvent *e) {
++	_childListCanvas = nullptr;
+ 	updateControlsGeometry();
+ 	if (_childListPostponed) {
+ 		const auto nochat = !controller()->mainSectionShown();
+@@ -4453,16 +4650,29 @@ void Widget::updateControlsGeometry() {
  		? ((smallw - ratiow) / float64(smallw - _narrowWidth))
  		: 0.;
  
@@ -5413,7 +5647,7 @@ index 46fd8e20cb1d20dbb74a46054e138b4861e75cbc..9225f1619181cac6dcae75e2973ef01f
  	_searchControls->setGeometry(0, filterAreaTop, ratiow, filterAreaHeight);
  	if (_subsectionTopBar) {
  		_subsectionTopBar->setGeometryWithNarrowRatio(
-@@ -4471,7 +4700,20 @@ void Widget::updateControlsGeometry() {
+@@ -4471,7 +4681,20 @@ void Widget::updateControlsGeometry() {
  			narrowRatio);
  	}
  
@@ -5435,7 +5669,7 @@ index 46fd8e20cb1d20dbb74a46054e138b4861e75cbc..9225f1619181cac6dcae75e2973ef01f
  	filterLeft = anim::interpolate(filterLeft, _narrowWidth, narrowRatio);
  	_search->setGeometryToLeft(
  		filterLeft,
-@@ -4480,14 +4722,14 @@ void Widget::updateControlsGeometry() {
+@@ -4480,14 +4703,14 @@ void Widget::updateControlsGeometry() {
  		_search->height());
  
  	auto mainMenuLeft = anim::interpolate(
@@ -5452,7 +5686,7 @@ index 46fd8e20cb1d20dbb74a46054e138b4861e75cbc..9225f1619181cac6dcae75e2973ef01f
  		_mainMenu.toggle->y()
  			+ _mainMenu.toggle->height()
  			+ st::dialogsFilterPadding.y());
-@@ -4520,9 +4762,14 @@ void Widget::updateControlsGeometry() {
+@@ -4520,9 +4743,14 @@ void Widget::updateControlsGeometry() {
  					- st::dialogsStories.photoLeft),
  				_narrowWidth,
  				narrowRatio)
@@ -5468,7 +5702,7 @@ index 46fd8e20cb1d20dbb74a46054e138b4861e75cbc..9225f1619181cac6dcae75e2973ef01f
  			inFolderTitle ? style::al_left : style::al_right,
  			{ 0, expandedStoriesTop, barw, st::dialogsStoriesFull.height });
  	}
-@@ -4537,6 +4784,9 @@ void Widget::updateControlsGeometry() {
+@@ -4537,6 +4765,9 @@ void Widget::updateControlsGeometry() {
  	updateLockUnlockPosition();
  
  	auto bottomSkip = 0;
@@ -5478,7 +5712,7 @@ index 46fd8e20cb1d20dbb74a46054e138b4861e75cbc..9225f1619181cac6dcae75e2973ef01f
  	const auto putBottomButton = [&](auto &button) {
  		if (button && !button->isHidden()) {
  			const auto buttonHeight = button->height();
-@@ -4548,6 +4798,14 @@ void Widget::updateControlsGeometry() {
+@@ -4548,6 +4779,14 @@ void Widget::updateControlsGeometry() {
  				buttonHeight);
  		}
  	};
@@ -5493,7 +5727,7 @@ index 46fd8e20cb1d20dbb74a46054e138b4861e75cbc..9225f1619181cac6dcae75e2973ef01f
  	putBottomButton(_updateTelegram);
  	putBottomButton(_downloadBar);
  	putBottomButton(_loadMoreChats);
-@@ -4612,7 +4870,7 @@ void Widget::updateControlsGeometry() {
+@@ -4612,7 +4851,7 @@ void Widget::updateControlsGeometry() {
  		if (_chatFilters) {
  			_chatFilters->move(0, chatFiltersTop);
  		}
@@ -5502,7 +5736,7 @@ index 46fd8e20cb1d20dbb74a46054e138b4861e75cbc..9225f1619181cac6dcae75e2973ef01f
  			+ ((_chatFilters
  				&& _searchState.query.isEmpty()
  				&& !_openedForum
-@@ -4620,6 +4878,21 @@ void Widget::updateControlsGeometry() {
+@@ -4620,6 +4859,21 @@ void Widget::updateControlsGeometry() {
  				&& !searchInPeer())
  				? (_chatFilters->height() * (1. - narrowRatio))
  				: 0);
@@ -5525,7 +5759,7 @@ index 46fd8e20cb1d20dbb74a46054e138b4861e75cbc..9225f1619181cac6dcae75e2973ef01f
  			? _suggestions->tabsHeight()
  			: 0;
 diff --git a/Telegram/SourceFiles/dialogs/dialogs_widget.h b/Telegram/SourceFiles/dialogs/dialogs_widget.h
-index 49037af7e23991c40a17f573605f4cca986ceaa8..fd600ad250fd14c7565c5608fadfae1077a9eadb 100644
+index 49037af7e23991c40a17f573605f4cca986ceaa8..9f715fc113b7100229dcf630acaefd0c957daa9b 100644
 --- a/Telegram/SourceFiles/dialogs/dialogs_widget.h
 +++ b/Telegram/SourceFiles/dialogs/dialogs_widget.h
 @@ -6,6 +6,7 @@ For license and copyright information please follow this link:
@@ -5560,7 +5794,15 @@ index 49037af7e23991c40a17f573605f4cca986ceaa8..fd600ad250fd14c7565c5608fadfae10
  	enum class Layout {
  		Main,
  		Child,
-@@ -212,6 +216,8 @@ private:
+@@ -131,7 +135,6 @@ public:
+ 		Window::SlideDirection direction,
+ 		const Window::SectionSlideParams &params);
+ 	void showFast();
+-	[[nodiscard]] rpl::producer<float64> shownProgressValue() const;
+ 
+ 	void scrollToEntry(const RowDescriptor &entry);
+ 
+@@ -212,6 +215,8 @@ private:
  	void setupFrozenAccountBar();
  	void setupConnectingWidget();
  	void setupMainMenuToggle();
@@ -5569,7 +5811,16 @@ index 49037af7e23991c40a17f573605f4cca986ceaa8..fd600ad250fd14c7565c5608fadfae10
  	void setupMoreChatsBar();
  	void switchToChatsFilter(FilterId id);
  	[[nodiscard]] QPixmap grabForChatsFilterSlide();
-@@ -349,6 +355,16 @@ private:
+@@ -273,7 +278,7 @@ private:
+ 		Data::CommunityInfo *community,
+ 		anim::type animated);
+ 	void hideChildList();
+-	void destroyChildListCanvas();
++	void animateChildList(QPixmap before, Window::SlideDirection direction);
+ 	[[nodiscard]] QPixmap grabForFolderSlideAnimation();
+ 	void startSlideAnimation(
+ 		QPixmap oldContentCache,
+@@ -349,6 +354,16 @@ private:
  	object_ptr<Ui::FadeWrapScaled<Ui::IconButton>> _jumpToDate;
  	object_ptr<Ui::CrossButton> _cancelSearch;
  	object_ptr<Ui::FadeWrapScaled<Ui::IconButton>> _lockUnlock;
@@ -5586,6 +5837,23 @@ index 49037af7e23991c40a17f573605f4cca986ceaa8..fd600ad250fd14c7565c5608fadfae10
  
  	std::unique_ptr<Ui::MoreChatsBar> _moreChatsBar;
  
+@@ -389,7 +404,6 @@ private:
+ 	Ui::Animations::Simple _scrollToAnimation;
+ 	int _scrollAnimationTo = 0;
+ 	std::unique_ptr<Window::SlideAnimation> _showAnimation;
+-	rpl::variable<float64> _shownProgressValue;
+ 
+ 	Ui::Animations::Simple _scrollToTopShown;
+ 	object_ptr<Ui::JumpDownButton> _scrollToTop;
+@@ -464,7 +478,7 @@ private:
+ 	rpl::variable<float64> _childListShown;
+ 	rpl::variable<PeerId> _childListPeerId;
+ 	bool _childListPostponed = false;
+-	std::unique_ptr<Ui::RpWidget> _hideChildListCanvas;
++	std::unique_ptr<Ui::RpWidget> _childListCanvas;
+ 	std::unique_ptr<Ui::RpWidget> _chatsFilterSlideCanvas;
+ 
+ };
 diff --git a/Telegram/SourceFiles/dialogs/ui/dialogs_layout.cpp b/Telegram/SourceFiles/dialogs/ui/dialogs_layout.cpp
 index 5528058df7d5f036e6fe3919306bd93f7c563fca..d840618cac88e61e6d673c28e894e9e1b45f52d0 100644
 --- a/Telegram/SourceFiles/dialogs/ui/dialogs_layout.cpp
