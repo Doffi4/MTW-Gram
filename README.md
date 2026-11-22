@@ -1,16 +1,30 @@
 # MTW-Gram
 
-An unofficial Windows client for the Telegram messaging service, built on Telegram Desktop with an interface inspired by Telegram for macOS.
+MTW-Gram is an unofficial Telegram client for Windows. It builds on Telegram Desktop and brings a macOS-inspired interface to chats, folders, and settings.
 
-[Русский](README.ru.md) · [Download for Windows](https://github.com/Doffi4/MTW-Gram/releases) · [Changelog](CHANGELOG.md)
+**[Download the Windows x64 beta](https://github.com/Doffi4/MTW-Gram/releases/tag/v0.2.4-beta)** · [All releases](https://github.com/Doffi4/MTW-Gram/releases) · [Русский](README.ru.md) · [Changelog](CHANGELOG.md)
 
-- A floating chat list, folder tabs, and a composer with replies and edits inside the input capsule.
-- In-window settings with a section sidebar, grouped controls, and animated navigation.
-- Restyled search, attachment and reaction menus, and emoji, sticker, and GIF panels.
+## Demo
+
+[![MTW-Gram on Windows with a public-channel folder, message history, and channel information](docs/screenshots/public-channels.webp)](https://github.com/Doffi4/MTW-Gram/releases/download/v0.2.4-beta/MTW-Gram-0.2.4-beta-demo.mp4)
+
+**[Watch the 29-second demo (MP4)](https://github.com/Doffi4/MTW-Gram/releases/download/v0.2.4-beta/MTW-Gram-0.2.4-beta-demo.mp4)** · Switch between public channels, scroll a feed, and return to chats from folder settings.
+
+| Folder settings | Optional smooth wheel scrolling |
+| :---: | :---: |
+| <img src="docs/screenshots/folder-settings.webp" width="420" alt="Chat folder settings with aligned options for tab placement and display"> | <img src="docs/screenshots/scroll-settings.webp" width="420" alt="Smooth mouse-wheel scrolling toggle in Chat Settings"> |
+
+## What's different
+
+- **Chats and folders** have a floating sidebar, configurable folder tabs, and a capsule composer that keeps replies and edits next to the text field.
+- **Navigation** animates when switching chats, returning from settings, and opening or closing a forum's topic list.
+- **Chat Settings** includes optional smooth scrolling for a mouse wheel. Settings open inside the main window and group related controls into cards.
 
 ## Install
 
-Download the Windows x64 ZIP from Releases, extract it to its own writable folder, and run `Telegram.exe`. The beta is unsigned. Each installation keeps its profile in `tdata` next to the executable. Builds with the GitHub updater can check for a release under **Settings → General → Check for updates**, download it, and install it on restart. For manual updates, keep the `tdata` folder.
+1. [Download the Windows x64 ZIP](https://github.com/Doffi4/MTW-Gram/releases/download/v0.2.4-beta/MTW-Gram-0.2.4-beta-win64.zip).
+2. Extract it to its own writable folder and run `Telegram.exe`. This beta is unsigned.
+3. To update, use **Settings → General → Check for updates**. If you update manually, keep the `tdata` folder next to `Telegram.exe`.
 
 ## Build from source
 
